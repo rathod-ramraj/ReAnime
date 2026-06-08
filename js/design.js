@@ -7,7 +7,7 @@ async function initDesign() {
     if (window.ShapeGridApp) {
       ShapeGridApp.init(document.getElementById('sg-global-bg'), getShapeGridOptions(design));
     }
-    document.title = 'AnimeXplore — Watch Anime Online';
+    document.title = 'AnimeXplore — Watch Anime Online Free in HD';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = '#0a1628';
   } catch (e) {

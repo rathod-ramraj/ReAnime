@@ -1,8 +1,14 @@
 const state = {
   view: 'home',
+  homeCategory: 'home',
   recentPage: 1,
   recentItems: [],
   recentPagination: null,
+  spotlightItems: [],
+  spotlightIndex: 0,
+  spotlightTimer: null,
+  trendingItems: [],
+  categoryItems: [],
   currentAnime: null,
   episodes: [],
   streamMethod: 'embed',
@@ -16,6 +22,14 @@ const state = {
   searchIndex: -1,
 };
 
+const CATEGORY_LABELS = {
+  home: 'Home',
+  movies: 'Movies',
+  tv: 'TV Series',
+  popular: 'Most Popular',
+  airing: 'Top Airing',
+};
+
 const $ = (sel) => document.querySelector(sel);
 
 const els = {
@@ -27,7 +41,23 @@ const els = {
   pageInfo: $('#pageInfo'),
   homeView: $('#homeView'),
   seriesView: $('#seriesView'),
-  homeGrid: $('#homeGrid'),
+  pageRoot: $('#pageRoot'),
+  heroSection: $('#heroSection'),
+  heroBg: $('#heroBg'),
+  heroRank: $('#heroRank'),
+  heroTitle: $('#heroTitle'),
+  heroMeta: $('#heroMeta'),
+  heroDesc: $('#heroDesc'),
+  heroWatch: $('#heroWatch'),
+  heroDetail: $('#heroDetail'),
+  heroPrev: $('#heroPrev'),
+  heroNext: $('#heroNext'),
+  homeTrendingSection: $('#homeTrendingSection'),
+  trendingRow: $('#trendingRow'),
+  trendingNext: $('#trendingNext'),
+  categorySection: $('#categorySection'),
+  categoryTitle: $('#categoryTitle'),
+  categoryGrid: $('#categoryGrid'),
   seriesPoster: $('#seriesPoster'),
   seriesTitle: $('#seriesTitle'),
   seriesBadges: $('#seriesBadges'),
@@ -54,8 +84,6 @@ const els = {
   seriesError: $('#seriesError'),
   seriesInfo: $('#seriesInfo'),
   navHome: $('#navHome'),
-  navHomeBtn: $('#navHomeBtn'),
-  navBrowse: $('#navBrowse'),
   franchiseSection: $('#franchiseSection'),
   franchiseTrack: $('#franchiseTrack'),
   franchiseDots: $('#franchiseDots'),
@@ -65,6 +93,8 @@ async function init() {
   bindEvents();
   checkServer();
   loadRecent();
+  loadHomeData();
+  setHomeCategory('home');
   showView('home');
   window.addEventListener('message', onPlayerMessage);
 }
@@ -125,11 +155,22 @@ function bindEvents() {
 
   const goHome = (e) => {
     e?.preventDefault();
+    setHomeCategory('home');
     showView('home');
   };
   els.navHome?.addEventListener('click', goHome);
-  els.navHomeBtn?.addEventListener('click', goHome);
-  els.navBrowse?.addEventListener('click', () => showView(state.currentAnime ? 'series' : 'home'));
+
+  document.querySelectorAll('.nav-cat').forEach((btn) => {
+    btn.addEventListener('click', () => setHomeCategory(btn.dataset.cat));
+  });
+
+  els.heroPrev?.addEventListener('click', () => stepSpotlight(-1));
+  els.heroNext?.addEventListener('click', () => stepSpotlight(1));
+  els.heroWatch?.addEventListener('click', () => openSpotlightAnime(true));
+  els.heroDetail?.addEventListener('click', () => openSpotlightAnime(false));
+  els.trendingNext?.addEventListener('click', () => {
+    els.trendingRow?.scrollBy({ left: 320, behavior: 'smooth' });
+  });
 }
 
 async function loadRecent() {
@@ -139,7 +180,6 @@ async function loadRecent() {
     state.recentItems = items;
     state.recentPagination = pagination;
     renderRelatedList();
-    renderHomeGrid();
     updatePageControls();
   } catch (e) {
     els.recentList.innerHTML = `<li class="empty-state">Failed: ${e.message}</li>`;
@@ -166,24 +206,171 @@ function renderRelatedList() {
   });
 }
 
-function renderHomeGrid() {
-  els.homeGrid.innerHTML = state.recentItems.slice(0, 16).map((item) => {
-    const a = API.normalizeAnikotoAnime(item);
-    return `
-      <article class="anime-card" data-id="${a.seriesId}">
-        <div class="anime-card-poster">
-          <img src="${a.poster || ''}" alt="${esc(a.title)}" loading="lazy">
-        </div>
-        <div class="anime-card-body">
-          <div class="anime-card-title">${esc(a.title)}</div>
-          <div class="anime-card-meta">${[a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ')}</div>
-        </div>
-      </article>`;
-  }).join('');
+async function loadHomeData() {
+  try {
+    const [spotlight, trending] = await Promise.all([
+      API.getBrowse('spotlight', 1),
+      API.getBrowse('trending', 1),
+    ]);
+    state.spotlightItems = spotlight.items || [];
+    state.trendingItems = trending.items || [];
+    state.spotlightIndex = 0;
+    renderSpotlight();
+    renderTrending();
+    startSpotlightAutoplay();
+  } catch (e) {
+    if (els.heroTitle) els.heroTitle.textContent = 'Could not load spotlight';
+  }
+}
 
-  els.homeGrid.querySelectorAll('.anime-card').forEach((card) => {
-    card.addEventListener('click', () => openAnikotoSeries(parseInt(card.dataset.id, 10)));
+async function loadCategoryItems(type) {
+  els.categoryGrid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const { items } = await API.getBrowse(type, 1);
+    state.categoryItems = items || [];
+    renderCategoryGrid();
+  } catch (e) {
+    els.categoryGrid.innerHTML = `<div class="empty-state">Failed: ${e.message}</div>`;
+  }
+}
+
+function setHomeCategory(cat) {
+  state.homeCategory = cat || 'home';
+  if (state.view !== 'home') showView('home');
+
+  document.querySelectorAll('.nav-cat').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
   });
+
+  const isHome = cat === 'home';
+  els.heroSection?.classList.toggle('hidden', !isHome);
+  els.homeTrendingSection?.classList.toggle('hidden', !isHome);
+  els.categorySection?.classList.toggle('hidden', isHome);
+
+  if (isHome) {
+    stopSpotlightAutoplay();
+    startSpotlightAutoplay();
+    return;
+  }
+
+  stopSpotlightAutoplay();
+  if (els.categoryTitle) els.categoryTitle.textContent = CATEGORY_LABELS[cat] || 'Browse';
+  loadCategoryItems(cat);
+}
+
+function renderSpotlight() {
+  const items = state.spotlightItems;
+  if (!items.length) return;
+
+  const idx = ((state.spotlightIndex % items.length) + items.length) % items.length;
+  state.spotlightIndex = idx;
+  const a = items[idx];
+
+  const bg = a.poster || '';
+  if (els.heroBg) {
+    els.heroBg.style.backgroundImage = bg ? `url('${bg.replace(/'/g, '%27')}')` : 'none';
+  }
+  if (els.heroRank) els.heroRank.textContent = `#${idx + 1} Spotlight`;
+  if (els.heroTitle) els.heroTitle.textContent = a.title || '—';
+  if (els.heroDesc) {
+    const desc = stripHtml(a.description || '');
+    els.heroDesc.textContent = desc.length > 220 ? `${desc.slice(0, 220)}…` : desc || 'No description available.';
+  }
+  if (els.heroMeta) {
+    const type = a.type || a.raw?.type || 'TV';
+    const eps = a.episodes ? `${a.episodes} eps` : '';
+    els.heroMeta.innerHTML = [
+      `<span class="hero-badge">${esc(type)}</span>`,
+      eps ? `<span class="hero-badge">${esc(eps)}</span>` : '',
+      '<span class="hero-badge hd">HD</span>',
+      a.score ? `<span class="hero-badge score">★ ${esc(String(a.score))}</span>` : '',
+    ].filter(Boolean).join('');
+  }
+}
+
+function renderTrending() {
+  if (!els.trendingRow) return;
+  const items = state.trendingItems.slice(0, 20);
+  if (!items.length) {
+    els.trendingRow.innerHTML = '<div class="empty-state">No trending anime</div>';
+    return;
+  }
+
+  els.trendingRow.innerHTML = items.map((a, i) => `
+    <article class="trending-card" data-mal="${a.malId}" data-idx="${i}">
+      <span class="trending-vtitle">${esc(a.title)}</span>
+      <img src="${a.poster || ''}" alt="${esc(a.title)}" loading="lazy" onerror="this.style.opacity='0.3'">
+    </article>`).join('');
+
+  els.trendingRow.querySelectorAll('.trending-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.idx, 10);
+      openSearchResult(state.trendingItems[idx]);
+    });
+    card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
+  });
+}
+
+function renderCategoryGrid() {
+  if (!els.categoryGrid) return;
+  const items = state.categoryItems;
+  if (!items.length) {
+    els.categoryGrid.innerHTML = '<div class="empty-state">No results</div>';
+    return;
+  }
+
+  els.categoryGrid.innerHTML = items.map((a, i) => `
+    <article class="category-card" data-mal="${a.malId}" data-idx="${i}">
+      <div class="category-poster">
+        <img src="${a.poster || ''}" alt="${esc(a.title)}" loading="lazy">
+      </div>
+      <div class="category-info">
+        <h3>${esc(a.title)}</h3>
+        <p>${[a.type || a.raw?.type || 'Anime', a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ')}</p>
+      </div>
+    </article>`).join('');
+
+  els.categoryGrid.querySelectorAll('.category-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.idx, 10);
+      openSearchResult(state.categoryItems[idx]);
+    });
+    card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
+  });
+}
+
+function stepSpotlight(dir) {
+  if (!state.spotlightItems.length) return;
+  state.spotlightIndex += dir;
+  renderSpotlight();
+  resetSpotlightAutoplay();
+}
+
+function startSpotlightAutoplay() {
+  stopSpotlightAutoplay();
+  if (state.homeCategory !== 'home' || state.spotlightItems.length < 2) return;
+  state.spotlightTimer = setInterval(() => {
+    state.spotlightIndex += 1;
+    renderSpotlight();
+  }, 6000);
+}
+
+function stopSpotlightAutoplay() {
+  if (state.spotlightTimer) {
+    clearInterval(state.spotlightTimer);
+    state.spotlightTimer = null;
+  }
+}
+
+function resetSpotlightAutoplay() {
+  stopSpotlightAutoplay();
+  startSpotlightAutoplay();
+}
+
+function openSpotlightAnime(autoPlay = false) {
+  const a = state.spotlightItems[state.spotlightIndex];
+  if (!a) return;
+  openSearchResult(a);
 }
 
 async function onSearchInput(e) {
@@ -257,16 +444,23 @@ function onSearchKeydown(e) {
   }
 }
 
+function getFirstEpisodeNumber() {
+  if (!state.episodes.length) return 1;
+  const sorted = [...state.episodes].sort((a, b) => Number(a.number) - Number(b.number));
+  return Number(sorted[0].number) || 1;
+}
+
 function applyResolvedData(result) {
   const { anime, episodes, streamMethod } = API.applyResolveResult(result);
   state.currentAnime = anime;
   state.episodes = episodes;
   state.streamMethod = streamMethod;
-  state.currentEpisode = 1;
+  state.currentEpisode = getFirstEpisodeNumber();
   state.language = anime.hasSub !== false ? 'sub' : 'dub';
   state.epRangeStart = 1;
   renderSeries();
-  playEpisode(1, true);
+  const firstEp = getFirstEpisodeNumber();
+  setTimeout(() => playEpisode(firstEp, true), 450);
 }
 
 async function openSearchResult(anime) {
@@ -600,25 +794,32 @@ function renderServerButtons() {
   render(els.dubServers, 'dub');
 }
 
-function resolveStreamUrl(ep, lang, method) {
+function tryStreamMethod(method, ep, lang) {
   const a = state.currentAnime;
-  if (!ep || !a) return null;
   const epNum = Number(ep.number);
-  const m = method || state.streamMethod;
-
-  if (m === 'embed') {
+  if (method === 'embed') {
     if (ep.embedId) return { url: API.buildStreamUrl({ method: 'embed', embedId: ep.embedId, lang }), method: 'embed' };
     if (ep.embedUrl?.[lang]) return { url: ep.embedUrl[lang], method: 'embed' };
   }
-  if (m === 'ani' && a.aniId) {
+  if (method === 'ani' && a.aniId) {
     return { url: API.buildStreamUrl({ method: 'ani', aniId: a.aniId, episode: epNum, lang }), method: 'ani' };
   }
-  if (m === 'mal' && a.malId) {
+  if (method === 'mal' && a.malId) {
     return { url: API.buildStreamUrl({ method: 'mal', malId: a.malId, episode: epNum, lang }), method: 'mal' };
   }
-  if (ep.embedId) return { url: API.buildStreamUrl({ method: 'embed', embedId: ep.embedId, lang }), method: 'embed' };
-  if (a.aniId) return { url: API.buildStreamUrl({ method: 'ani', aniId: a.aniId, episode: epNum, lang }), method: 'ani' };
-  if (a.malId) return { url: API.buildStreamUrl({ method: 'mal', malId: a.malId, episode: epNum, lang }), method: 'mal' };
+  return null;
+}
+
+function resolveStreamUrl(ep, lang, method) {
+  const a = state.currentAnime;
+  if (!ep || !a) return null;
+
+  const preferred = method || state.streamMethod;
+  const chain = [...new Set([preferred, 'embed', 'mal', 'ani'])];
+  for (const m of chain) {
+    const hit = tryStreamMethod(m, ep, lang);
+    if (hit?.url) return hit;
+  }
   return null;
 }
 
@@ -632,11 +833,22 @@ function loadPlayer(url) {
   els.playerPlaceholder.textContent = 'Loading…';
   els.playerIframe.classList.add('hidden');
   els.playerIframe.src = 'about:blank';
-  setTimeout(() => {
+
+  const load = () => {
+    els.playerIframe.onload = () => {
+      els.playerIframe.classList.remove('hidden');
+      els.playerPlaceholder.classList.add('hidden');
+      els.playerIframe.onload = null;
+    };
     els.playerIframe.src = url;
-    els.playerIframe.classList.remove('hidden');
-    els.playerPlaceholder.classList.add('hidden');
-  }, 100);
+    setTimeout(() => {
+      if (!els.playerIframe.classList.contains('hidden')) return;
+      els.playerIframe.classList.remove('hidden');
+      els.playerPlaceholder.classList.add('hidden');
+    }, 2500);
+  };
+
+  setTimeout(load, 200);
 }
 
 function scrollToPlayer() {
@@ -723,8 +935,18 @@ function showSeriesError(msg) {
 }
 
 function showView(view) {
-  els.navHomeBtn?.classList.toggle('active', view === 'home');
-  els.navBrowse?.classList.toggle('active', view !== 'home');
+  els.pageRoot?.classList.toggle('series-mode', view === 'series');
+  els.pageRoot?.classList.toggle('home-mode', view === 'home');
+
+  if (view === 'home') {
+    document.querySelectorAll('.nav-cat').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.cat === state.homeCategory);
+    });
+    if (state.homeCategory === 'home') startSpotlightAutoplay();
+  } else {
+    stopSpotlightAutoplay();
+    document.querySelectorAll('.nav-cat').forEach((btn) => btn.classList.remove('active'));
+  }
 
   if (state.view === view) return;
 

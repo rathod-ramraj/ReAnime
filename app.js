@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const { ApiCache, TTL } = require('./server/cache');
 const { createResolver } = require('./server/resolve');
+const { botGuardMiddleware } = require('./server/bot-guard');
 
 const ROOT = __dirname;
 
@@ -16,6 +17,8 @@ const resolver = createResolver({ cache, upstream: UPSTREAM });
 
 function createApp() {
   const app = express();
+
+  app.use(botGuardMiddleware);
 
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -82,6 +85,23 @@ function createApp() {
   app.get('/api/resolve/series/:seriesId', async (req, res) => {
     try {
       const result = await resolver.resolveBySeriesId(req.params.seriesId);
+      res.json(result);
+    } catch (err) {
+      res.status(502).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.get('/api/browse', async (req, res) => {
+    const type = (req.query.type || 'airing').toLowerCase();
+    const allowed = ['airing', 'popular', 'movies', 'tv', 'trending', 'spotlight'];
+    if (!allowed.includes(type)) {
+      return res.status(400).json({ ok: false, error: 'Invalid browse type' });
+    }
+    try {
+      const page = parseInt(req.query.page || '1', 10);
+      const hit = !!cache.get(`browse:${type}:${page}`);
+      const result = await resolver.browseJikan(type, page);
+      res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
       res.json(result);
     } catch (err) {
       res.status(502).json({ ok: false, error: err.message });

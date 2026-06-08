@@ -6,6 +6,7 @@ const Cache = {
     recent: 10 * 60 * 1000,
     series: 60 * 60 * 1000,
     franchise: 60 * 60 * 1000,
+    browse: 30 * 60 * 1000,
   },
   LS_PREFIX: 'animexplore:',
 

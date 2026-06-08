@@ -20,6 +20,20 @@ const API = {
     return null;
   },
 
+  async getBrowse(type = 'airing', page = 1) {
+    const cached = Cache.get(`browse:${type}:${page}`);
+    if (cached) return cached;
+
+    const result = await this.fetchJSON(`/api/browse?type=${encodeURIComponent(type)}&page=${page}`);
+    const normalized = {
+      items: (result.items || []).map((item) => this.normalizeJikanAnime(item)),
+      pagination: result.pagination || {},
+      type: result.type || type,
+    };
+    Cache.set(`browse:${type}:${page}`, normalized, Cache.TTL.browse);
+    return normalized;
+  },
+
   async getRecentAnime(page = 1, perPage = 20) {
     const cached = Cache.getRecent(page, perPage);
     if (cached) return cached;
@@ -102,9 +116,10 @@ const API = {
       genres: Array.isArray(item.genres)
         ? item.genres.map((g) => (typeof g === 'string' ? g : g.name)).filter(Boolean)
         : [],
+      type: item.type || item.raw?.type || 'TV',
       hasSub: item.hasSub !== false,
       hasDub: item.hasDub !== false,
-      raw: item,
+      raw: item.raw || item,
     };
   },
 
@@ -150,11 +165,29 @@ const API = {
     }));
   },
 
+  normalizeEpisodeNumbers(episodes = []) {
+    if (!episodes.length) return episodes;
+    const mapped = episodes.map((ep, i) => ({
+      ...ep,
+      number: Number(ep.number ?? ep.episode_number ?? ep.episode) || i + 1,
+    }));
+    const min = Math.min(...mapped.map((e) => e.number));
+    if (min === 0) {
+      return mapped.map((e) => ({ ...e, number: e.number + 1 }));
+    }
+    return mapped;
+  },
+
   applyResolveResult(result) {
+    const episodes = this.normalizeEpisodeNumbers(result.episodes || []);
+    let streamMethod = result.streamMethod || 'mal';
+    if (streamMethod === 'embed' && !episodes.some((e) => e.embedId)) {
+      streamMethod = result.anime?.aniId ? 'ani' : 'mal';
+    }
     return {
       anime: this.normalizeJikanAnime(result.anime),
-      episodes: result.episodes || [],
-      streamMethod: result.streamMethod || 'mal',
+      episodes,
+      streamMethod,
     };
   },
 };

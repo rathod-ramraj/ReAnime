@@ -5,12 +5,43 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a1628" />
-    <title>AnimeXplore — Watch Anime Online</title>
-    <meta name="description" content="Search and stream anime on AnimeXplore." />
+    <title>AnimeXplore — Watch Anime Online Free in HD</title>
+    <meta name="description" content="AnimeXplore lets you search, browse, and watch anime online in HD. Explore trending series, movies, top airing shows, and popular titles — sub and dub." />
+    <meta name="keywords" content="watch anime online, anime streaming, anime HD, sub anime, dub anime, trending anime, anime movies, TV series anime, AnimeXplore" />
+    <meta name="author" content="AnimeXplore" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="/" id="canonicalUrl" />
+    <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AnimeXplore" />
+    <meta property="og:title" content="AnimeXplore — Watch Anime Online Free in HD" />
+    <meta property="og:description" content="Search and stream anime in HD. Browse trending, movies, TV series, most popular, and top airing anime on AnimeXplore." />
+    <meta property="og:image" content="/favicon.png" id="ogImage" />
+    <meta property="og:url" content="/" id="ogUrl" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AnimeXplore — Watch Anime Online Free in HD" />
+    <meta name="twitter:description" content="Search and stream anime in HD. Trending, movies, TV series, and top airing shows." />
+    <meta name="twitter:image" content="/favicon.png" id="twitterImage" />
+    <script type="application/ld+json" id="schemaWebSite">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "AnimeXplore",
+      "alternateName": "Anime Xplore",
+      "description": "Watch anime online in HD. Browse trending anime, movies, TV series, and top airing shows.",
+      "url": "/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▶</text></svg>" />
     <link rel="stylesheet" href="css/style.css" />
 </head>
 
@@ -32,16 +63,50 @@
         </div>
 
         <nav class="header-nav">
-            <button class="header-link active" id="navHomeBtn">Home</button>
-            <button class="header-link" id="navBrowse">Browse</button>
+            <button class="header-link nav-cat active" data-cat="home" type="button">Home</button>
+            <button class="header-link nav-cat" data-cat="movies" type="button">Movies</button>
+            <button class="header-link nav-cat" data-cat="tv" type="button">TV Series</button>
+            <button class="header-link nav-cat" data-cat="popular" type="button">Most Popular</button>
+            <button class="header-link nav-cat" data-cat="airing" type="button">Top Airing</button>
         </nav>
     </header>
 
-    <div class="page">
+    <div class="page" id="pageRoot">
         <div class="content">
             <section id="homeView" class="view">
-                <h2 class="page-title s-label">Trending Anime</h2>
-                <div id="homeGrid" class="anime-grid"></div>
+                <div id="heroSection" class="hero-spotlight">
+                    <div class="hero-bg" id="heroBg"></div>
+                    <div class="hero-overlay"></div>
+                    <div class="hero-inner">
+                        <div class="hero-content">
+                            <span class="hero-rank" id="heroRank">#1 Spotlight</span>
+                            <h1 class="hero-title" id="heroTitle">Loading…</h1>
+                            <div class="hero-meta" id="heroMeta"></div>
+                            <p class="hero-desc" id="heroDesc"></p>
+                            <div class="hero-actions">
+                                <button class="btn-watch" id="heroWatch" type="button">▶ Watch Now</button>
+                                <button class="btn-detail" id="heroDetail" type="button">Detail ›</button>
+                            </div>
+                        </div>
+                        <div class="hero-controls">
+                            <button class="hero-arrow" id="heroPrev" type="button" aria-label="Previous">▲</button>
+                            <button class="hero-arrow" id="heroNext" type="button" aria-label="Next">▼</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="homeTrendingSection" class="home-section">
+                    <h2 class="section-title-gold">Trending</h2>
+                    <div class="trending-scroll-wrap">
+                        <div class="trending-row" id="trendingRow"></div>
+                        <button class="trending-arrow" id="trendingNext" type="button" aria-label="Scroll">›</button>
+                    </div>
+                </div>
+
+                <div id="categorySection" class="home-section hidden">
+                    <h2 class="section-title-gold" id="categoryTitle">Browse</h2>
+                    <div class="category-grid" id="categoryGrid"></div>
+                </div>
             </section>
 
             <section id="seriesView" class="view hidden">
@@ -145,6 +210,15 @@
         </aside>
     </div>
 
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <p class="footer-disclaimer">
+                AnimeXplore does not store any files on our server; we only link to media hosted on third-party services.
+            </p>
+            <p class="footer-copy">© <span id="footerYear"></span> AnimeXplore. All rights reserved.</p>
+        </div>
+    </footer>
+
     <!-- DevTools block overlay -->
     <div id="dt-block" aria-hidden="true">
         <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -157,6 +231,7 @@
         <p class="dt-block-hint">Please close Developer Tools to continue watching.</p>
     </div>
 
+    <script src="js/seo.js"></script>
     <script src="js/cache.js"></script>
     <script src="js/shape-grid.js"></script>
     <script src="js/design.js"></script>
@@ -198,6 +273,17 @@
                 if (dtOpen) { elDtBlock.classList.add('show'); showBlock(); }
                 else { elDtBlock.classList.remove('show'); }
             }, 3000);
+        })();
+
+        // Basic client-side bot / automation guard
+        (function () {
+            var ua = navigator.userAgent || '';
+            var blocked = !ua || ua.length < 12
+                || /headless|phantomjs|selenium|puppeteer|playwright|webdriver/i.test(ua)
+                || navigator.webdriver === true;
+            if (blocked) {
+                document.documentElement.innerHTML = '<body style="background:#0a1628;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif">Access denied. Automated browsers are not permitted.</body>';
+            }
         })();
     </script>
 </body>

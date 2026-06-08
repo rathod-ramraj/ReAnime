@@ -5,12 +5,15 @@
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "css/**", "use": "@vercel/static" },
     { "src": "js/**", "use": "@vercel/static" },
-    { "src": "Design.json", "use": "@vercel/static" }
+    { "src": "Design.json", "use": "@vercel/static" },
+    { "src": "favicon.png", "use": "@vercel/static" },
+    { "src": "robots.txt", "use": "@vercel/static" },
+    { "src": "sitemap.xml", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.js" },
     { "src": "/proxy/(.*)", "dest": "/api/index.js" },
-    { "src": "/(.*\\.(css|js|json|ico|png|jpg|webp|svg))", "dest": "/$1" },
+    { "src": "/(.*\\.(css|js|json|ico|png|jpg|webp|svg|txt|xml))", "dest": "/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

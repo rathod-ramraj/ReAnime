@@ -31,7 +31,7 @@ Open **http://localhost:8765**
    git add .
    git commit -m "AnimeXplore initial deploy"
    git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/animexplore.git
+   git remote add origin https://github.com/rathod-ramraj/animexploree.git
    git push -u origin main
    ```
 

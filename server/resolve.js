@@ -10,6 +10,7 @@ function normalizeJikan(item) {
     year: item.year,
     score: item.score,
     status: item.status,
+    type: item.type || 'TV',
     episodes: item.episodes || null,
     malId: item.mal_id,
     aniId: null,
@@ -41,12 +42,25 @@ function normalizeAnikotoAnime(item) {
 }
 
 function normalizeEpisodes(episodes = []) {
-  return episodes.map((ep) => ({
-    number: ep.number || ep.episode_number || ep.episode,
-    title: ep.title || ep.name || `Episode ${ep.number}`,
-    embedId: ep.episode_embed_id || ep.embed_id,
-    embedUrl: ep.embed_url || null,
-    id: ep.id,
+  const mapped = episodes.map((ep, i) => {
+    const num = ep.number ?? ep.episode_number ?? ep.episode ?? (i + 1);
+    return {
+      number: Number(num) || i + 1,
+      title: ep.title || ep.name || `Episode ${num}`,
+      embedId: ep.episode_embed_id || ep.embed_id || ep.embedId,
+      embedUrl: ep.embed_url || ep.embedUrl || null,
+      id: ep.id,
+    };
+  });
+
+  const nums = mapped.map((e) => Number(e.number)).filter((n) => !Number.isNaN(n));
+  const min = nums.length ? Math.min(...nums) : 1;
+  if (min === 0) {
+    return mapped.map((e) => ({ ...e, number: Number(e.number) + 1 }));
+  }
+  return mapped.map((e, i) => ({
+    ...e,
+    number: Number(e.number) || i + 1,
   }));
 }
 
@@ -144,6 +158,31 @@ function createResolver({ cache, upstream }) {
     return json.data;
   }
 
+  async function browseJikan(type, page = 1) {
+    const limit = 24;
+    const paths = {
+      airing: `/top/anime?filter=airing&page=${page}&limit=${limit}`,
+      popular: `/top/anime?filter=bypopularity&page=${page}&limit=${limit}`,
+      movies: `/anime?type=movie&order_by=popularity&sort=desc&page=${page}&limit=${limit}`,
+      tv: `/anime?type=tv&order_by=popularity&sort=desc&page=${page}&limit=${limit}`,
+      trending: `/top/anime?filter=bypopularity&page=${page}&limit=${limit}`,
+      spotlight: `/top/anime?filter=airing&page=${page}&limit=8`,
+    };
+    const path = paths[type] || paths.airing;
+    const key = `browse:${type}:${page}`;
+    const cached = cache.get(key);
+    if (cached) return cached;
+
+    const json = await fetchJSON(`${upstream.jikan}${path}`);
+    const result = {
+      items: (json.data || []).map(normalizeJikan),
+      pagination: json.pagination || { current_page: page, has_next_page: false },
+      type,
+    };
+    cache.set(key, result, TTL.jikan);
+    return result;
+  }
+
   async function searchJikan(query, page = 1) {
     const key = `search:${query.toLowerCase()}:${page}`;
     const cached = cache.get(key);
@@ -205,7 +244,7 @@ function createResolver({ cache, upstream }) {
         try {
           const series = await getSeries(seriesId);
           const eps = normalizeEpisodes(series.episodes);
-          if (eps.length && eps[0].embedId) {
+          if (eps.length && eps.some((e) => e.embedId)) {
             streamMethod = 'embed';
             enriched.seriesId = seriesId;
             enriched.poster = series.anime?.poster || enriched.poster;
@@ -255,6 +294,7 @@ function createResolver({ cache, upstream }) {
   return {
     getRecent,
     getSeries,
+    browseJikan,
     searchJikan,
     resolveByMalId,
     resolveBySeriesId,

@@ -1,6 +1,26 @@
 const API = {
   MEGAPLAY: 'https://megaplay.buzz/stream',
 
+  posterUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    if (url.startsWith('/api/img') || url.startsWith('data:')) return url;
+    if (url.startsWith('/')) return url;
+
+    const isMobile = typeof window !== 'undefined' && (
+      window.matchMedia('(max-width: 900px)').matches
+      || (window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1024)
+    );
+
+    // Desktop: load CDN directly (fast, worked before proxy). Mobile: proxy for referrer issues.
+    if (!isMobile) return url;
+
+    try {
+      const u = new URL(url);
+      if (u.protocol === 'https:') return `/api/img?url=${encodeURIComponent(url)}`;
+    } catch (_) { /* fall through */ }
+    return url;
+  },
+
   sleep(ms) {
     return new Promise((r) => setTimeout(r, ms));
   },

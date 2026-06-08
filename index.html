@@ -77,7 +77,9 @@
         <div class="content">
             <section id="homeView" class="view" aria-label="Home">
                 <div id="heroSection" class="hero-spotlight">
-                    <div class="hero-bg" id="heroBg"></div>
+                    <div class="hero-bg" id="heroBg">
+                        <img id="heroBgImg" class="hero-bg-img" alt="" decoding="async" fetchpriority="high" referrerpolicy="no-referrer" />
+                    </div>
                     <div class="hero-overlay"></div>
                     <div class="hero-inner">
                         <div class="hero-content">
@@ -130,6 +132,12 @@
                 <div id="seriesInfo">
                     <!-- Watch zone: player first (anikoto style) -->
                     <div class="watch-zone glass-panel" id="playerWrap">
+                        <div class="mobile-watch-bar" id="mobileWatchBar">
+                            <div class="mobile-watch-text">
+                                <p class="mobile-watch-title" id="mobileWatchTitle">—</p>
+                                <p class="mobile-watch-ep" id="mobileWatchEp">Episode —</p>
+                            </div>
+                        </div>
                         <div class="player-screen">
                             <iframe id="playerIframe" class="hidden" allowfullscreen scrolling="no"
                                 referrerpolicy="no-referrer-when-downgrade"></iframe>
@@ -180,7 +188,10 @@
                     </div>
 
                     <!-- Series detail (anikoto info page style) -->
-                    <div class="detail-panel glass-card">
+                    <div class="detail-panel glass-card mobile-collapsed" id="detailPanel">
+                        <button type="button" class="mobile-info-toggle" id="mobileInfoToggle" aria-expanded="false">
+                            Show anime info ▾
+                        </button>
                         <div class="detail-main">
                             <div class="detail-poster" id="seriesPoster"></div>
                             <div class="detail-body">

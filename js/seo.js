@@ -28,4 +28,20 @@
 
   const year = document.getElementById('footerYear');
   if (year) year.textContent = String(new Date().getFullYear());
+
+  window.PageTitle = {
+    default: 'AnimeXplore — Watch Anime Online Free in HD',
+    set(animeTitle, episode) {
+      if (animeTitle && episode) {
+        document.title = `${animeTitle} · Ep ${episode} — AnimeXplore`;
+      } else if (animeTitle) {
+        document.title = `${animeTitle} — AnimeXplore`;
+      } else {
+        document.title = this.default;
+      }
+    },
+    reset() {
+      document.title = this.default;
+    },
+  };
 })();

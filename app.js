@@ -137,6 +137,53 @@ function createApp() {
     res.json({ entries: cache.store.size, malIndex: cache.malIndex.size });
   });
 
+  const IMG_HOST_BLOCK = /^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.)/;
+
+  app.get('/api/img', async (req, res) => {
+    const raw = (req.query.url || '').trim();
+    let parsed;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      return res.status(400).send('Invalid url');
+    }
+    if (parsed.protocol !== 'https:') return res.status(400).send('HTTPS only');
+    const host = parsed.hostname.toLowerCase();
+    if (IMG_HOST_BLOCK.test(host) || host.endsWith('.local')) {
+      return res.status(400).send('Host not allowed');
+    }
+
+    const cacheKey = `img:${parsed.href}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      res.setHeader('Content-Type', cached.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+      res.setHeader('X-Cache', 'HIT');
+      return res.send(cached.body);
+    }
+
+    try {
+      const upstream = await fetch(parsed.href, {
+        headers: {
+          'User-Agent': 'AnimeXplore/1.0',
+          Accept: 'image/*',
+          Referer: 'https://myanimelist.net/',
+        },
+      });
+      if (!upstream.ok) return res.status(upstream.status).send('Upstream error');
+      const body = Buffer.from(await upstream.arrayBuffer());
+      if (body.length > 3 * 1024 * 1024) return res.status(413).send('Too large');
+      const contentType = upstream.headers.get('content-type') || 'image/jpeg';
+      cache.set(cacheKey, { body, contentType }, TTL.jikan);
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+      res.setHeader('X-Cache', 'MISS');
+      res.send(body);
+    } catch (err) {
+      res.status(502).send(err.message);
+    }
+  });
+
   app.get(/^\/proxy\/anikoto(\/.*)?$/, async (req, res) => {
     const upstreamPath = req.originalUrl.replace(/^\/proxy\/anikoto/, '') || '/';
     const cacheKey = `proxy:anikoto:${upstreamPath}`;

@@ -32,6 +32,45 @@ const CATEGORY_LABELS = {
 
 const $ = (sel) => document.querySelector(sel);
 
+function isMobileView() {
+  return window.matchMedia('(max-width: 900px)').matches
+    || (window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1024);
+}
+
+function syncDeviceMode() {
+  document.documentElement.classList.toggle('mobile-mode', isMobileView());
+}
+
+function posterSrc(url) {
+  return API.posterUrl(url || '');
+}
+
+function imgTag(poster, alt) {
+  const direct = poster || '';
+  const src = posterSrc(direct);
+  return `<img src="${esc(src)}" data-fallback="${esc(direct)}" alt="${esc(alt || '')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="window.__imgFallback(this)">`;
+}
+
+window.__imgFallback = function (img) {
+  const fb = img.dataset.fallback;
+  if (fb && img.src !== fb && !img.dataset.triedFb) {
+    img.dataset.triedFb = '1';
+    img.src = fb;
+    return;
+  }
+  if (img.classList.contains('hero-bg-img')) {
+    img.style.opacity = '0';
+    return;
+  }
+  img.style.opacity = '0.3';
+};
+
+function updatePageTitle(animeTitle, episode) {
+  if (!window.PageTitle) return;
+  if (!animeTitle) window.PageTitle.reset();
+  else window.PageTitle.set(animeTitle, episode);
+}
+
 const els = {
   searchInput: $('#searchInput'),
   searchDropdown: $('#searchDropdown'),
@@ -44,6 +83,7 @@ const els = {
   pageRoot: $('#pageRoot'),
   heroSection: $('#heroSection'),
   heroBg: $('#heroBg'),
+  heroBgImg: $('#heroBgImg'),
   heroRank: $('#heroRank'),
   heroTitle: $('#heroTitle'),
   heroMeta: $('#heroMeta'),
@@ -70,6 +110,10 @@ const els = {
   playerIframe: $('#playerIframe'),
   playerPlaceholder: $('#playerPlaceholder'),
   playerWrap: $('#playerWrap'),
+  mobileWatchTitle: $('#mobileWatchTitle'),
+  mobileWatchEp: $('#mobileWatchEp'),
+  detailPanel: $('#detailPanel'),
+  mobileInfoToggle: $('#mobileInfoToggle'),
   watchingMsg: $('#watchingMsg'),
   subBtn: $('#subBtn'),
   dubBtn: $('#dubBtn'),
@@ -97,6 +141,8 @@ const els = {
 const AZ_LETTERS = ['All', '#', '0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
 
 async function init() {
+  syncDeviceMode();
+  window.addEventListener('resize', debounce(syncDeviceMode, 150));
   bindEvents();
   renderAzGrid();
   renderContinueWatching();
@@ -194,6 +240,21 @@ function bindEvents() {
   els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((btn) => {
     btn.addEventListener('click', () => onMobileNav(btn.dataset.mob));
   });
+
+  els.mobileInfoToggle?.addEventListener('click', toggleMobileDetail);
+}
+
+function toggleMobileDetail() {
+  const isCollapsed = els.detailPanel?.classList.contains('mobile-collapsed');
+  setMobileDetailCollapsed(!isCollapsed);
+}
+
+function setMobileDetailCollapsed(collapsed) {
+  els.detailPanel?.classList.toggle('mobile-collapsed', collapsed);
+  if (els.mobileInfoToggle) {
+    els.mobileInfoToggle.textContent = collapsed ? 'Show anime info ▾' : 'Hide anime info ▴';
+    els.mobileInfoToggle.setAttribute('aria-expanded', String(!collapsed));
+  }
 }
 
 function onMobileNav(tab) {
@@ -229,7 +290,7 @@ function renderLibraryGrid() {
   els.categoryGrid.innerHTML = merged.map((item, i) => `
     <article class="category-card" data-idx="${i}" data-mal="${item.malId || ''}" data-series="${item.seriesId || ''}">
       <div class="category-poster">
-        <img src="${item.poster || ''}" alt="${esc(item.title)}" loading="lazy">
+        ${imgTag(item.poster, item.title)}
       </div>
       <div class="category-info">
         <h3>${esc(item.title)}</h3>
@@ -301,7 +362,7 @@ function renderContinueWatching() {
     return `
       <article class="continue-card" data-idx="${i}">
         <div class="continue-poster">
-          <img src="${item.poster || ''}" alt="${esc(item.title)}" loading="lazy">
+          ${imgTag(item.poster, item.title)}
         </div>
         <div class="continue-info">
           <h4>${esc(item.title)}</h4>
@@ -378,7 +439,7 @@ function renderRelatedList() {
     const active = state.currentAnime?.seriesId === norm.seriesId ? ' active' : '';
     return `
       <li class="related-item${active}" data-id="${norm.seriesId}">
-        <img src="${norm.poster || ''}" alt="" loading="lazy" onerror="this.style.display='none'">
+        ${imgTag(norm.poster, norm.title)}
         <span class="related-title">${esc(norm.title)}</span>
       </li>`;
   }).join('');
@@ -457,10 +518,17 @@ function renderSpotlight() {
   state.spotlightIndex = idx;
   const a = items[idx];
 
-  const bg = a.poster || '';
-  if (els.heroBg) {
-    els.heroBg.style.backgroundImage = bg ? `url('${bg.replace(/'/g, '%27')}')` : 'none';
+  const bg = posterSrc(a.poster);
+  if (els.heroBgImg) {
+    els.heroBgImg.dataset.fallback = a.poster || '';
+    els.heroBgImg.dataset.triedFb = '';
+    els.heroBgImg.referrerPolicy = 'no-referrer';
+    els.heroBgImg.onerror = function () { window.__imgFallback(this); };
+    els.heroBgImg.src = bg || '';
+    els.heroBgImg.alt = a.title || '';
+    els.heroBgImg.style.opacity = bg ? '1' : '0';
   }
+  if (els.heroBg) els.heroBg.style.backgroundImage = 'none';
   if (els.heroRank) els.heroRank.textContent = `#${idx + 1} Spotlight`;
   if (els.heroTitle) els.heroTitle.textContent = a.title || '—';
   if (els.heroDesc) {
@@ -490,7 +558,7 @@ function renderTrending() {
   els.trendingRow.innerHTML = items.map((a, i) => `
     <article class="trending-card" data-mal="${a.malId}" data-idx="${i}">
       <span class="trending-vtitle">${esc(a.title)}</span>
-      <img src="${a.poster || ''}" alt="${esc(a.title)}" loading="lazy" onerror="this.style.opacity='0.3'">
+      ${imgTag(a.poster, a.title)}
     </article>`).join('');
 
   els.trendingRow.querySelectorAll('.trending-card').forEach((card) => {
@@ -513,7 +581,7 @@ function renderCategoryGrid() {
   els.categoryGrid.innerHTML = items.map((a, i) => `
     <article class="category-card" data-mal="${a.malId}" data-idx="${i}">
       <div class="category-poster">
-        <img src="${a.poster || ''}" alt="${esc(a.title)}" loading="lazy">
+        ${imgTag(a.poster, a.title)}
       </div>
       <div class="category-info">
         <h3>${esc(a.title)}</h3>
@@ -558,10 +626,15 @@ function resetSpotlightAutoplay() {
   startSpotlightAutoplay();
 }
 
-function openSpotlightAnime(autoPlay = false) {
+function openSpotlightAnime(watchNow = true) {
   const a = state.spotlightItems[state.spotlightIndex];
   if (!a) return;
-  openSearchResult(a);
+  if (watchNow) {
+    openSearchResult(a, { autoPlay: true, scrollToPlayer: true });
+    return;
+  }
+  openSearchResult(a, { autoPlay: false, scrollToPlayer: false });
+  setTimeout(() => scrollToDetail(), 600);
 }
 
 async function onSearchInput(e) {
@@ -601,7 +674,7 @@ function renderSearchDropdown() {
   els.searchDropdown.classList.remove('hidden');
   els.searchDropdown.innerHTML = state.searchResults.map((anime, i) => `
     <div class="search-item${i === state.searchIndex ? ' active' : ''}" data-idx="${i}" data-mal="${anime.malId}">
-      <img src="${anime.poster || ''}" alt="" onerror="this.style.display='none'">
+      ${imgTag(anime.poster, '')}
       <div>
         <div class="search-item-title">${esc(anime.title)}</div>
         <div class="search-item-meta">${anime.year || ''} · ${anime.episodes || '?'} eps</div>
@@ -641,7 +714,7 @@ function getFirstEpisodeNumber() {
   return Number(sorted[0].number) || 1;
 }
 
-function applyResolvedData(result) {
+function applyResolvedData(result, opts = {}) {
   const { anime, episodes, streamMethod } = API.applyResolveResult(result);
   state.currentAnime = anime;
   state.episodes = episodes;
@@ -650,11 +723,15 @@ function applyResolvedData(result) {
   state.language = anime.hasSub !== false ? 'sub' : 'dub';
   state.epRangeStart = 1;
   renderSeries();
+  setMobileDetailCollapsed(isMobileView());
+  updatePageTitle(anime.title, null);
+  if (opts.autoPlay === false) return;
   const firstEp = getFirstEpisodeNumber();
-  setTimeout(() => playEpisode(firstEp, true), 450);
+  const delay = isMobileView() ? 550 : 450;
+  setTimeout(() => playEpisode(firstEp, opts.scrollToPlayer !== false), delay);
 }
 
-async function openSearchResult(anime) {
+async function openSearchResult(anime, opts = {}) {
   state.searchOpen = false;
   els.searchInput.value = anime.title || '';
   renderSearchDropdown();
@@ -663,7 +740,7 @@ async function openSearchResult(anime) {
 
   const cached = Cache.getResolve(anime.malId);
   if (cached) {
-    applyResolvedData(cached);
+    applyResolvedData(cached, opts);
     setLoading(false);
     API.resolveByMalId(anime.malId).catch(() => {});
     return;
@@ -671,7 +748,7 @@ async function openSearchResult(anime) {
 
   setLoading(true);
   try {
-    applyResolvedData(await API.resolveByMalId(anime.malId));
+    applyResolvedData(await API.resolveByMalId(anime.malId), opts);
     setLoading(false);
   } catch (e) {
     setLoading(false);
@@ -707,8 +784,9 @@ function renderSeries() {
   const a = state.currentAnime;
   if (!a) return;
 
-  els.seriesPoster.innerHTML = `<img src="${a.poster || ''}" alt="${esc(a.title)}">`;
+  els.seriesPoster.innerHTML = imgTag(a.poster, a.title);
   els.seriesTitle.textContent = a.title;
+  if (els.mobileWatchTitle) els.mobileWatchTitle.textContent = a.title;
 
   const tags = ['<span class="tag hd">HD</span>'];
   if (a.hasSub) tags.push('<span class="tag sub">CC</span>');
@@ -1044,8 +1122,21 @@ function loadPlayer(url) {
 }
 
 function scrollToPlayer() {
-  els.playerWrap?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const target = els.playerWrap;
+  if (!target) return;
+  const headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h'), 10) || 72;
+  const offset = isMobileView() ? headerH + 4 : headerH + 8;
+  const top = target.getBoundingClientRect().top + window.scrollY - offset;
+  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+}
+
+function scrollToDetail() {
+  const target = els.detailPanel;
+  if (!target) return;
+  setMobileDetailCollapsed(false);
+  const headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h'), 10) || 72;
+  const top = target.getBoundingClientRect().top + window.scrollY - headerH - 8;
+  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
 function updateEpisodeUI(ep) {
@@ -1053,6 +1144,8 @@ function updateEpisodeUI(ep) {
   if (els.watchingMsg) {
     els.watchingMsg.innerHTML = `You're watching <strong>Episode ${num}</strong>. If current server doesn't work, try another.`;
   }
+  if (els.mobileWatchEp) els.mobileWatchEp.textContent = `Episode ${num}`;
+  updatePageTitle(state.currentAnime?.title, num);
 }
 
 function playEpisode(epNum, scrollToPlayerView = true) {
@@ -1090,7 +1183,10 @@ function playEpisode(epNum, scrollToPlayerView = true) {
 
   saveWatchProgress();
 
-  if (scrollToPlayerView) scrollToPlayer();
+  if (scrollToPlayerView) {
+    scrollToPlayer();
+    if (isMobileView()) setTimeout(scrollToPlayer, 700);
+  }
 }
 
 function playAdjacent(dir) {
@@ -1133,6 +1229,7 @@ function showView(view) {
   els.pageRoot?.classList.toggle('home-mode', view === 'home');
 
   if (view === 'home') {
+    updatePageTitle(null);
     document.querySelectorAll('.nav-cat').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.cat === state.homeCategory);
     });

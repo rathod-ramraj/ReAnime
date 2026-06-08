@@ -465,9 +465,9 @@
         "modes": ["embed_id sub/dub", "mal fallback", "ani fallback"]
       },
       "protection": {
-        "devtools_block": true,
-        "context_menu_block": true,
-        "bot_guard": "headless/selenium/webdriver UA blocked"
+        "devtools_block": "desktop only — disabled on touch/mobile viewports",
+        "context_menu_block": "desktop only",
+        "bot_guard": "desktop automation UAs only; mobile browsers exempt"
       }
     },
 

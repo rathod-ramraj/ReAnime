@@ -46,6 +46,7 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-h) + 16px);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -53,12 +54,29 @@ body {
   background: var(--bg);
   color: var(--text-1);
   min-height: 100vh;
+  min-height: 100dvh;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   padding-top: var(--page-top-pad);
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+.header-link,
+.mob-nav-item,
+.trending-card,
+.continue-card,
+.anime-card,
+.category-card,
+.search-item,
+.ep-row,
+.related-item,
+.server-btn,
+.tool-btn {
+  touch-action: manipulation;
 }
 
 #sg-global-bg { display: none !important; }
@@ -1601,8 +1619,18 @@ html.perf-streaming .brand-name { animation: none; }
 
 @media (max-width: 768px) {
   .mobile-bottom-nav { display: flex; }
-  body { padding-bottom: 72px; }
+  body {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
   .header-nav { display: none; }
+  #dt-block { display: none !important; }
+  .site-header {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .hero-inner { padding-left: 20px; padding-right: 20px; }
+  .home-section { padding-left: 16px; padding-right: 16px; }
+  .page { padding-left: 12px; padding-right: 12px; }
 }
 
 @media (max-width: 600px) {

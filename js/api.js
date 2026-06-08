@@ -1,10 +1,50 @@
 const API = {
   MEGAPLAY: 'https://megaplay.buzz/stream',
 
-  async fetchJSON(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+  sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+  },
+
+  async fetchJSON(url, retries = 3) {
+    let lastErr;
+    for (let i = 0; i < retries; i++) {
+      try {
+        const res = await fetch(url);
+        if (res.status === 429 || res.status >= 500) {
+          await this.sleep(400 * (i + 1));
+          lastErr = new Error(`HTTP ${res.status}`);
+          continue;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      } catch (err) {
+        lastErr = err;
+        if (i < retries - 1) await this.sleep(300 * (i + 1));
+      }
+    }
+    throw lastErr;
+  },
+
+  normalizeHomeFeed(json) {
+    return {
+      spotlight: (json.spotlight || []).map((item) => this.normalizeJikanAnime(item)),
+      trending: (json.trending || []).map((item) => this.normalizeJikanAnime(item)),
+    };
+  },
+
+  async getHomeFeed() {
+    const cached = Cache.getHome();
+    if (cached) {
+      this.fetchJSON('/api/home').then((json) => {
+        Cache.setHome(this.normalizeHomeFeed(json));
+      }).catch(() => {});
+      return cached;
+    }
+
+    const json = await this.fetchJSON('/api/home');
+    const result = this.normalizeHomeFeed(json);
+    Cache.setHome(result);
+    return result;
   },
 
   buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub' }) {

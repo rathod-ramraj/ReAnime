@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0a1628" />
+    <meta name="theme-color" content="#050505" />
     <title>AnimeXplore — Watch Anime Online Free in HD</title>
     <meta name="description" content="AnimeXplore lets you search, browse, and watch anime online in HD. Explore trending series, movies, top airing shows, and popular titles — sub and dub." />
     <meta name="keywords" content="watch anime online, anime streaming, anime HD, sub anime, dub anime, trending anime, anime movies, TV series anime, AnimeXplore" />
@@ -13,6 +13,7 @@
     <link rel="canonical" href="/" id="canonicalUrl" />
     <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AnimeXplore" />
     <meta property="og:title" content="AnimeXplore — Watch Anime Online Free in HD" />
@@ -29,7 +30,7 @@
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "AnimeXplore",
-      "alternateName": "Anime Xplore",
+      "alternateName": "AnimeXplore",
       "description": "Watch anime online in HD. Browse trending anime, movies, TV series, and top airing shows.",
       "url": "/",
       "potentialAction": {
@@ -46,14 +47,15 @@
 </head>
 
 <body>
-    <div id="sg-global-bg" aria-hidden="true"></div>
-
     <div id="proxyBanner" class="proxy-banner hidden">
         API unavailable — run <code>npm start</code> locally or deploy to Vercel.
     </div>
 
-    <header class="site-header">
-        <a href="#" class="brand" id="navHome">Anime<span class="g">Xplore</span></a>
+    <header class="site-header" role="banner">
+        <a href="#" class="brand" id="navHome" aria-label="AnimeXplore Home">
+            <img src="/favicon.png" alt="" class="brand-icon-img" width="34" height="34" />
+            <span class="brand-name">AnimeXplore</span>
+        </a>
 
         <div class="search-wrap">
             <span class="search-icon">⌕</span>
@@ -62,7 +64,7 @@
             <div id="searchDropdown" class="search-dropdown hidden"></div>
         </div>
 
-        <nav class="header-nav">
+        <nav class="header-nav" aria-label="Main navigation">
             <button class="header-link nav-cat active" data-cat="home" type="button">Home</button>
             <button class="header-link nav-cat" data-cat="movies" type="button">Movies</button>
             <button class="header-link nav-cat" data-cat="tv" type="button">TV Series</button>
@@ -71,9 +73,9 @@
         </nav>
     </header>
 
-    <div class="page" id="pageRoot">
+    <main class="page" id="pageRoot">
         <div class="content">
-            <section id="homeView" class="view">
+            <section id="homeView" class="view" aria-label="Home">
                 <div id="heroSection" class="hero-spotlight">
                     <div class="hero-bg" id="heroBg"></div>
                     <div class="hero-overlay"></div>
@@ -95,10 +97,20 @@
                     </div>
                 </div>
 
+                <div id="continueSection" class="home-section hidden">
+                    <h2 class="section-title-gold">Continue Watching</h2>
+                    <div class="continue-row" id="continueRow"></div>
+                </div>
+
                 <div id="homeTrendingSection" class="home-section">
                     <h2 class="section-title-gold">Trending</h2>
                     <div class="trending-scroll-wrap">
-                        <div class="trending-row" id="trendingRow"></div>
+                        <div class="trending-row" id="trendingRow">
+                            <div class="skeleton-trending"></div>
+                            <div class="skeleton-trending"></div>
+                            <div class="skeleton-trending"></div>
+                            <div class="skeleton-trending"></div>
+                        </div>
                         <button class="trending-arrow" id="trendingNext" type="button" aria-label="Scroll">›</button>
                     </div>
                 </div>
@@ -109,7 +121,7 @@
                 </div>
             </section>
 
-            <section id="seriesView" class="view hidden">
+            <section id="seriesView" class="view hidden" aria-label="Anime watch and details">
                 <div id="seriesError" class="error-banner hidden"></div>
                 <div id="seriesLoading" class="loading hidden">
                     <div class="spinner"></div><span>Loading…</span>
@@ -172,7 +184,10 @@
                         <div class="detail-main">
                             <div class="detail-poster" id="seriesPoster"></div>
                             <div class="detail-body">
-                                <h1 id="seriesTitle">—</h1>
+                                <div class="detail-title-row">
+                                    <h1 id="seriesTitle">—</h1>
+                                    <button class="btn-bookmark" id="bookmarkBtn" type="button" title="Bookmark" aria-label="Bookmark anime">☆</button>
+                                </div>
                                 <div class="detail-tags" id="seriesBadges"></div>
                                 <p class="detail-desc" id="seriesDesc"></p>
                                 <button class="read-more hidden" id="readMore">Read more</button>
@@ -208,14 +223,48 @@
                 <li class="loading"><div class="spinner"></div></li>
             </ul>
         </aside>
-    </div>
+    </main>
 
-    <footer class="site-footer">
-        <div class="footer-inner">
-            <p class="footer-disclaimer">
-                AnimeXplore does not store any files on our server; we only link to media hosted on third-party services.
-            </p>
-            <p class="footer-copy">© <span id="footerYear"></span> AnimeXplore. All rights reserved.</p>
+    <nav class="mobile-bottom-nav" id="mobileNav" aria-label="Mobile navigation">
+        <button type="button" class="mob-nav-item active" data-mob="home"><span>⌂</span>Home</button>
+        <button type="button" class="mob-nav-item" data-mob="search"><span>⌕</span>Search</button>
+        <button type="button" class="mob-nav-item" data-mob="browse"><span>▦</span>Browse</button>
+        <button type="button" class="mob-nav-item" data-mob="library"><span>★</span>Library</button>
+    </nav>
+
+    <footer class="site-footer" role="contentinfo">
+        <div class="footer-bg" aria-hidden="true"></div>
+        <div class="footer-inner-wide">
+            <section class="footer-az">
+                <h3 class="footer-az-title">A-Z List</h3>
+                <p class="footer-az-desc">Browse anime alphabetically from A to Z.</p>
+                <div class="az-grid" id="azGrid"></div>
+            </section>
+
+            <div class="footer-mid">
+                <a href="#" class="footer-brand" id="footerBrand">
+                    <img src="/favicon.png" alt="" class="footer-brand-icon" width="40" height="40" />
+                    <span class="footer-brand-text brand-name">AnimeXplore</span>
+                </a>
+                <nav class="footer-links" aria-label="Footer links">
+                    <a href="#" data-footer="help">Help</a>
+                    <a href="#" data-footer="request">Request Anime</a>
+                    <a href="#" data-footer="dmca">DMCA</a>
+                    <a href="#" data-footer="terms">Terms of Use</a>
+                    <a href="#" data-footer="contact">Contact</a>
+                </nav>
+                <a href="#" class="footer-friends" data-footer="friends">Friends</a>
+            </div>
+
+            <div class="footer-legal">
+                <p class="footer-browser-tip">
+                    Tip: Use <a href="https://brave.com/" target="_blank" rel="noopener noreferrer">Brave Browser</a> for faster loading and smoother streaming redirects.
+                </p>
+                <p class="footer-copy">Copyright © <span id="footerYear"></span> AnimeXplore. All Rights Reserved.</p>
+                <p class="footer-disclaimer">
+                    AnimeXplore does not store any files on our server. All contents are provided by non-affiliated third parties.
+                </p>
+            </div>
         </div>
     </footer>
 
@@ -232,8 +281,8 @@
     </div>
 
     <script src="js/seo.js"></script>
+    <script src="js/storage.js"></script>
     <script src="js/cache.js"></script>
-    <script src="js/shape-grid.js"></script>
     <script src="js/design.js"></script>
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
@@ -282,7 +331,7 @@
                 || /headless|phantomjs|selenium|puppeteer|playwright|webdriver/i.test(ua)
                 || navigator.webdriver === true;
             if (blocked) {
-                document.documentElement.innerHTML = '<body style="background:#0a1628;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif">Access denied. Automated browsers are not permitted.</body>';
+                document.documentElement.innerHTML = '<body style="background:#050505;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif">Access denied. Automated browsers are not permitted.</body>';
             }
         })();
     </script>

@@ -19,10 +19,15 @@ class ApiCache {
     const entry = this.store.get(key);
     if (!entry) return null;
     if (Date.now() > entry.expires) {
-      this.store.delete(key);
+      entry.stale = true;
       return null;
     }
     return entry.data;
+  }
+
+  getStale(key) {
+    const entry = this.store.get(key);
+    return entry?.data || null;
   }
 
   set(key, data, ttl = TTL.proxy) {

@@ -21,6 +21,10 @@ Open **http://localhost:8765**
 
 > Do not use Live Server (port 5500). The API proxy is required.
 
+## Recommended browser
+
+Use **[Brave Browser](https://brave.com/)** for the best experience — faster page loads, built-in ad/tracker blocking, and reliable handling of streaming embed redirects.
+
 ## Deploy to Vercel
 
 ### Option A — GitHub (recommended)

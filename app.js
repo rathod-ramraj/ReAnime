@@ -33,7 +33,7 @@ function createApp() {
     const res = await fetch(url, {
       ...options,
       headers: {
-        'User-Agent': 'AniWorld/1.0',
+        'User-Agent': 'AnimeXplore/1.0',
         Accept: 'application/json',
         ...options.headers,
       },
@@ -87,6 +87,20 @@ function createApp() {
       const result = await resolver.resolveBySeriesId(req.params.seriesId);
       res.json(result);
     } catch (err) {
+      res.status(502).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.get('/api/home', async (req, res) => {
+    try {
+      const hit = !!cache.get('home:feed');
+      const result = await resolver.getHomeFeed();
+      res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      res.json(result);
+    } catch (err) {
+      const stale = cache.getStale('home:feed');
+      if (stale) return res.json(stale);
       res.status(502).json({ ok: false, error: err.message });
     }
   });
@@ -179,7 +193,9 @@ function createApp() {
     res.sendFile(path.join(ROOT, 'index.html'));
   });
 
-  resolver.warmMalIndex(8).catch(() => {});
+  resolver.warmMalIndex(4).catch(() => {});
+  resolver.getHomeFeed().catch(() => {});
+  resolver.browseJikan('popular', 1).catch(() => {});
 
   return app;
 }

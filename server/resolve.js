@@ -75,17 +75,33 @@ function buildEpisodesFromCount(count, start = 1) {
   }));
 }
 
-async function fetchJSON(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'User-Agent': 'AniWorld/1.0',
-      Accept: 'application/json',
-      ...options.headers,
-    },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchJSON(url, options = {}, retries = 3) {
+  let lastErr;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'User-Agent': 'AnimeXplore/1.0',
+          Accept: 'application/json',
+          ...options.headers,
+        },
+      });
+      if (res.status === 429 || res.status >= 500) {
+        await sleep(500 * (attempt + 1));
+        lastErr = new Error(`HTTP ${res.status}`);
+        continue;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries - 1) await sleep(350 * (attempt + 1));
+    }
+  }
+  throw lastErr;
 }
 
 function createResolver({ cache, upstream }) {
@@ -173,14 +189,43 @@ function createResolver({ cache, upstream }) {
     const cached = cache.get(key);
     if (cached) return cached;
 
-    const json = await fetchJSON(`${upstream.jikan}${path}`);
-    const result = {
-      items: (json.data || []).map(normalizeJikan),
-      pagination: json.pagination || { current_page: page, has_next_page: false },
-      type,
-    };
-    cache.set(key, result, TTL.jikan);
-    return result;
+    try {
+      const json = await fetchJSON(`${upstream.jikan}${path}`);
+      const result = {
+        items: (json.data || []).map(normalizeJikan),
+        pagination: json.pagination || { current_page: page, has_next_page: false },
+        type,
+      };
+      cache.set(key, result, TTL.jikan);
+      return result;
+    } catch (err) {
+      const stale = cache.getStale(key);
+      if (stale) return stale;
+      throw err;
+    }
+  }
+
+  async function getHomeFeed() {
+    const key = 'home:feed';
+    return cache.dedupe(key, async () => {
+      const cached = cache.get(key);
+      if (cached) return cached;
+
+      const [airing, popular] = await Promise.all([
+        fetchJSON(`${upstream.jikan}/top/anime?filter=airing&page=1&limit=12`).catch(() => ({ data: [] })),
+        fetchJSON(`${upstream.jikan}/top/anime?filter=bypopularity&page=1&limit=24`).catch(() => ({ data: [] })),
+      ]);
+
+      const result = {
+        spotlight: (airing.data || []).slice(0, 8).map(normalizeJikan),
+        trending: (popular.data || []).map(normalizeJikan),
+        cachedAt: Date.now(),
+      };
+      cache.set(key, result, TTL.jikan);
+      cache.set('browse:spotlight:1', { items: result.spotlight, pagination: {}, type: 'spotlight' }, TTL.jikan);
+      cache.set('browse:trending:1', { items: result.trending, pagination: {}, type: 'trending' }, TTL.jikan);
+      return result;
+    });
   }
 
   async function searchJikan(query, page = 1) {
@@ -236,7 +281,7 @@ function createResolver({ cache, upstream }) {
       let streamMethod = 'mal';
 
       const [seriesId, aniMedia] = await Promise.all([
-        findSeriesByMal(malId, 10).catch(() => null),
+        findSeriesByMal(malId, 6).catch(() => null),
         searchAniList(enriched.title).catch(() => null),
       ]);
 
@@ -295,6 +340,7 @@ function createResolver({ cache, upstream }) {
     getRecent,
     getSeries,
     browseJikan,
+    getHomeFeed,
     searchJikan,
     resolveByMalId,
     resolveBySeriesId,

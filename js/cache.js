@@ -7,6 +7,7 @@ const Cache = {
     series: 60 * 60 * 1000,
     franchise: 60 * 60 * 1000,
     browse: 30 * 60 * 1000,
+    home: 30 * 60 * 1000,
   },
   LS_PREFIX: 'animexplore:',
 
@@ -79,5 +80,13 @@ const Cache = {
 
   setFranchise(malId, data) {
     this.set(`franchise:${malId}`, data, this.TTL.franchise, true);
+  },
+
+  getHome() {
+    return this.get('home:feed');
+  },
+
+  setHome(data) {
+    this.set('home:feed', data, this.TTL.home, true);
   },
 };

@@ -87,16 +87,25 @@ const els = {
   franchiseSection: $('#franchiseSection'),
   franchiseTrack: $('#franchiseTrack'),
   franchiseDots: $('#franchiseDots'),
+  continueSection: $('#continueSection'),
+  continueRow: $('#continueRow'),
+  bookmarkBtn: $('#bookmarkBtn'),
+  azGrid: $('#azGrid'),
+  mobileNav: $('#mobileNav'),
 };
+
+const AZ_LETTERS = ['All', '#', '0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
 
 async function init() {
   bindEvents();
-  checkServer();
-  loadRecent();
-  loadHomeData();
+  renderAzGrid();
+  renderContinueWatching();
   setHomeCategory('home');
   showView('home');
   window.addEventListener('message', onPlayerMessage);
+  checkServer();
+  loadHomeData();
+  loadRecent();
 }
 
 async function checkServer() {
@@ -171,6 +180,179 @@ function bindEvents() {
   els.trendingNext?.addEventListener('click', () => {
     els.trendingRow?.scrollBy({ left: 320, behavior: 'smooth' });
   });
+
+  els.bookmarkBtn?.addEventListener('click', toggleBookmarkCurrent);
+  $('#footerBrand')?.addEventListener('click', (e) => { e.preventDefault(); goHome(e); });
+
+  document.querySelectorAll('[data-footer]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      alert('This section will be available soon. Contact us via the site for requests.');
+    });
+  });
+
+  els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((btn) => {
+    btn.addEventListener('click', () => onMobileNav(btn.dataset.mob));
+  });
+}
+
+function onMobileNav(tab) {
+  els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mob === tab);
+  });
+  if (tab === 'home') { setHomeCategory('home'); showView('home'); return; }
+  if (tab === 'search') { showView('home'); els.searchInput?.focus(); return; }
+  if (tab === 'browse') { setHomeCategory('popular'); return; }
+  if (tab === 'library') { showLibrary(); }
+}
+
+function showLibrary() {
+  showView('home');
+  state.homeCategory = 'library';
+  document.querySelectorAll('.nav-cat').forEach((b) => b.classList.remove('active'));
+  els.heroSection?.classList.add('hidden');
+  els.homeTrendingSection?.classList.add('hidden');
+  els.continueSection?.classList.add('hidden');
+  els.categorySection?.classList.remove('hidden');
+  if (els.categoryTitle) els.categoryTitle.textContent = 'My Library';
+  renderLibraryGrid();
+}
+
+function renderLibraryGrid() {
+  const bookmarks = UserStore.getBookmarks();
+  const history = UserStore.getHistory();
+  const merged = [...bookmarks, ...history.filter((h) => !bookmarks.some((b) => b.id === h.id))];
+  if (!merged.length) {
+    els.categoryGrid.innerHTML = '<div class="empty-state">No bookmarks or watch history yet.</div>';
+    return;
+  }
+  els.categoryGrid.innerHTML = merged.map((item, i) => `
+    <article class="category-card" data-idx="${i}" data-mal="${item.malId || ''}" data-series="${item.seriesId || ''}">
+      <div class="category-poster">
+        <img src="${item.poster || ''}" alt="${esc(item.title)}" loading="lazy">
+      </div>
+      <div class="category-info">
+        <h3>${esc(item.title)}</h3>
+        <p>${item.episode ? `Episode ${item.episode}` : 'Bookmarked'}</p>
+      </div>
+    </article>`).join('');
+
+  els.categoryGrid.querySelectorAll('.category-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.idx, 10);
+      const item = merged[idx];
+      if (item.seriesId) openAnikotoSeries(parseInt(item.seriesId, 10));
+      else if (item.malId) openSearchResult({ malId: parseInt(item.malId, 10), title: item.title });
+    });
+  });
+}
+
+function renderAzGrid() {
+  if (!els.azGrid) return;
+  els.azGrid.innerHTML = AZ_LETTERS.map((l) =>
+    `<button type="button" class="az-btn" data-letter="${l === 'All' ? 'all' : l}">${l}</button>`
+  ).join('');
+  els.azGrid.querySelectorAll('.az-btn').forEach((btn) => {
+    btn.addEventListener('click', () => filterByLetter(btn.dataset.letter));
+  });
+}
+
+async function filterByLetter(letter) {
+  els.azGrid?.querySelectorAll('.az-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.letter === letter);
+  });
+  showView('home');
+  els.heroSection?.classList.add('hidden');
+  els.homeTrendingSection?.classList.add('hidden');
+  els.continueSection?.classList.add('hidden');
+  els.categorySection?.classList.remove('hidden');
+  if (els.categoryTitle) els.categoryTitle.textContent = letter === 'all' ? 'All Anime' : `Anime: ${letter}`;
+  els.categoryGrid.innerHTML = Array(8).fill('<div class="skeleton-card"></div>').join('');
+
+  try {
+    const { items } = await API.getBrowse('popular', 1);
+    const pool = items || [];
+    const filtered = pool.filter((a) => matchesLetter(a.title, letter));
+    state.categoryItems = filtered;
+    renderCategoryGrid();
+  } catch (e) {
+    els.categoryGrid.innerHTML = `<div class="empty-state">Failed: ${e.message}</div>`;
+  }
+}
+
+function matchesLetter(title, letter) {
+  const t = (title || '').trim();
+  if (!t) return false;
+  if (letter === 'all') return true;
+  if (letter === '#') return /^[^a-zA-Z0-9]/.test(t);
+  if (letter === '0-9') return /^[0-9]/.test(t);
+  return t.toUpperCase().startsWith(letter);
+}
+
+function renderContinueWatching() {
+  const items = UserStore.getContinueWatching();
+  if (!items.length) {
+    els.continueSection?.classList.add('hidden');
+    return;
+  }
+  els.continueSection?.classList.remove('hidden');
+  els.continueRow.innerHTML = items.map((item, i) => {
+    const pct = item.totalEps ? Math.min(100, (item.episode / item.totalEps) * 100) : 30;
+    return `
+      <article class="continue-card" data-idx="${i}">
+        <div class="continue-poster">
+          <img src="${item.poster || ''}" alt="${esc(item.title)}" loading="lazy">
+        </div>
+        <div class="continue-info">
+          <h4>${esc(item.title)}</h4>
+          <p>Episode ${item.episode || 1}</p>
+          <div class="continue-bar"><span style="width:${pct}%"></span></div>
+        </div>
+      </article>`;
+  }).join('');
+
+  els.continueRow.querySelectorAll('.continue-card').forEach((card) => {
+    card.addEventListener('click', () => resumeWatch(items[parseInt(card.dataset.idx, 10)]));
+  });
+}
+
+function resumeWatch(item) {
+  if (item.seriesId) {
+    openAnikotoSeries(parseInt(item.seriesId, 10));
+    setTimeout(() => { if (item.episode) playEpisode(item.episode, true); }, 1200);
+  } else if (item.malId) {
+    openSearchResult({ malId: parseInt(item.malId, 10), title: item.title });
+    setTimeout(() => { if (item.episode) playEpisode(item.episode, true); }, 1200);
+  }
+}
+
+function toggleBookmarkCurrent() {
+  if (!state.currentAnime) return;
+  const on = UserStore.toggleBookmark(state.currentAnime);
+  updateBookmarkButton(on);
+}
+
+function updateBookmarkButton(forced) {
+  if (!els.bookmarkBtn || !state.currentAnime) return;
+  const on = typeof forced === 'boolean' ? forced : UserStore.isBookmarked(UserStore.animeKey(state.currentAnime));
+  els.bookmarkBtn.textContent = on ? '★' : '☆';
+  els.bookmarkBtn.classList.toggle('active', on);
+  els.bookmarkBtn.setAttribute('aria-label', on ? 'Remove bookmark' : 'Bookmark anime');
+}
+
+function saveWatchProgress() {
+  const a = state.currentAnime;
+  if (!a) return;
+  UserStore.addHistory({
+    id: UserStore.animeKey(a),
+    malId: a.malId || null,
+    seriesId: a.seriesId || null,
+    title: a.title,
+    poster: a.poster || null,
+    episode: state.currentEpisode,
+    totalEps: state.episodes.length || a.episodes || null,
+  });
+  renderContinueWatching();
 }
 
 async function loadRecent() {
@@ -206,20 +388,27 @@ function renderRelatedList() {
   });
 }
 
+function applyHomeData(data) {
+  if (!data) return;
+  state.spotlightItems = data.spotlight || [];
+  state.trendingItems = data.trending || [];
+  state.spotlightIndex = 0;
+  renderSpotlight();
+  renderTrending();
+  startSpotlightAutoplay();
+}
+
 async function loadHomeData() {
+  const cached = Cache.getHome();
+  if (cached?.spotlight?.length) applyHomeData(cached);
+
   try {
-    const [spotlight, trending] = await Promise.all([
-      API.getBrowse('spotlight', 1),
-      API.getBrowse('trending', 1),
-    ]);
-    state.spotlightItems = spotlight.items || [];
-    state.trendingItems = trending.items || [];
-    state.spotlightIndex = 0;
-    renderSpotlight();
-    renderTrending();
-    startSpotlightAutoplay();
+    applyHomeData(await API.getHomeFeed());
   } catch (e) {
-    if (els.heroTitle) els.heroTitle.textContent = 'Could not load spotlight';
+    if (!cached?.spotlight?.length && els.heroTitle) {
+      els.heroTitle.textContent = 'Could not load — retrying…';
+      setTimeout(() => loadHomeData(), 2000);
+    }
   }
 }
 
@@ -245,7 +434,9 @@ function setHomeCategory(cat) {
   const isHome = cat === 'home';
   els.heroSection?.classList.toggle('hidden', !isHome);
   els.homeTrendingSection?.classList.toggle('hidden', !isHome);
+  els.continueSection?.classList.toggle('hidden', !isHome || !UserStore.getContinueWatching().length);
   els.categorySection?.classList.toggle('hidden', isHome);
+  els.azGrid?.querySelectorAll('.az-btn').forEach((b) => b.classList.remove('active'));
 
   if (isHome) {
     stopSpotlightAutoplay();
@@ -548,6 +739,7 @@ function renderSeries() {
   renderServerButtons();
   updateLangButtons();
   loadFranchise(a.malId);
+  updateBookmarkButton();
 }
 
 function metaRow(label, value) {
@@ -567,7 +759,7 @@ async function expandFranchiseIds(startMalId) {
   const fetched = new Set();
   let fetches = 0;
 
-  while (queue.length && fetches < 8 && discovered.size < 14) {
+  while (queue.length && fetches < 4 && discovered.size < 10) {
     const id = queue.shift();
     if (fetched.has(id)) continue;
     fetched.add(id);
@@ -896,6 +1088,8 @@ function playEpisode(epNum, scrollToPlayerView = true) {
   updateLangButtons();
   updateNavButtons();
 
+  saveWatchProgress();
+
   if (scrollToPlayerView) scrollToPlayer();
 }
 
@@ -942,10 +1136,14 @@ function showView(view) {
     document.querySelectorAll('.nav-cat').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.cat === state.homeCategory);
     });
+    els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((b) => {
+      b.classList.toggle('active', b.dataset.mob === 'home' && state.homeCategory === 'home');
+    });
     if (state.homeCategory === 'home') startSpotlightAutoplay();
   } else {
     stopSpotlightAutoplay();
     document.querySelectorAll('.nav-cat').forEach((btn) => btn.classList.remove('active'));
+    els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((b) => b.classList.remove('active'));
   }
 
   if (state.view === view) return;
@@ -977,6 +1175,11 @@ function updatePageControls() {
 
 function onPlayerMessage(event) {
   if (event.origin !== 'https://megaplay.buzz') return;
+  const data = event.data;
+  if (!data || !els.autoNext?.checked) return;
+  if (data === 'ended' || data?.event === 'ended' || data?.type === 'ended') {
+    playAdjacent(1);
+  }
 }
 
 function esc(str) {

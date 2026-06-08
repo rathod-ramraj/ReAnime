@@ -4,12 +4,9 @@ async function initDesign() {
     const design = await res.json();
     applyDesignPalette(design);
     applyAnimeXploreTheme();
-    if (window.ShapeGridApp) {
-      ShapeGridApp.init(document.getElementById('sg-global-bg'), getShapeGridOptions(design));
-    }
     document.title = 'AnimeXplore — Watch Anime Online Free in HD';
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = '#0a1628';
+    if (meta) meta.content = '#050505';
   } catch (e) {
     console.warn('[Design] Could not load Design.json', e);
     applyAnimeXploreTheme();
@@ -18,19 +15,24 @@ async function initDesign() {
 
 function applyAnimeXploreTheme() {
   const root = document.documentElement;
-  const blue = {
-    '--bg': '#0a1628',
-    '--highlight': '#38bdf8',
-    '--highlight-soft': '#60a5fa',
-    '--accent-purple': '#06b6d4',
+  const theme = {
+    '--bg': '#050505',
+    '--surface': 'rgba(255, 255, 255, 0.05)',
+    '--surface-2': 'rgba(255, 255, 255, 0.03)',
+    '--highlight': '#d4a853',
+    '--highlight-soft': '#e8c547',
+    '--accent-purple': '#4a9eff',
     '--accent-blue': '#3b82f6',
-    '--grad-brand': 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-    '--accent-dim': 'rgba(59, 130, 246, 0.12)',
-    '--accent-glow': 'rgba(59, 130, 246, 0.35)',
-    '--glass-border': 'rgba(30, 58, 95, 0.55)',
-    '--glass-border-2': 'rgba(30, 58, 95, 0.35)',
+    '--grad-brand': 'linear-gradient(135deg, #3b82f6, #d4a853)',
+    '--accent-dim': 'rgba(59, 130, 246, 0.1)',
+    '--accent-glow': 'rgba(212, 168, 83, 0.35)',
+    '--glass-border': 'rgba(255, 255, 255, 0.08)',
+    '--glass-border-2': 'rgba(255, 255, 255, 0.05)',
+    '--gold': '#d4a853',
+    '--gold-bright': '#e8c547',
+    '--gold-dim': 'rgba(212, 168, 83, 0.12)',
   };
-  for (const [key, val] of Object.entries(blue)) {
+  for (const [key, val] of Object.entries(theme)) {
     root.style.setProperty(key, val);
   }
 }
@@ -49,12 +51,8 @@ function applyDesignPalette(design) {
 
   const palette = ds.color_palette || {};
   const mapping = {
-    primary_bg: '--bg',
     secondary_bg: '--surface-2',
     glass_surface: '--surface',
-    glass_border: '--glass-border',
-    glass_border_light: '--glass-border-2',
-    accent_blue: '--accent-blue',
     text_primary: '--text-1',
     text_secondary: '--text-2',
     text_tertiary: '--text-3',
@@ -65,21 +63,6 @@ function applyDesignPalette(design) {
   for (const [src, cssVar] of Object.entries(mapping)) {
     if (palette[src]) root.style.setProperty(cssVar, palette[src]);
   }
-}
-
-function getShapeGridOptions(design) {
-  const sg = design?.design_system?.background?.shapegrid?.defaults_from_design_json || {};
-  return {
-    direction: sg.direction || 'diagonal',
-    speed: sg.speed ?? 0.28,
-    squareSize: sg.squareSize || 40,
-    shape: sg.shape || 'square',
-    backgroundColor: '#0a1628',
-    borderColor: '#1e3a5f',
-    hoverFillColor: 'rgba(59,130,246,0.18)',
-    hoverTrailAmount: sg.hoverTrailAmount ?? 3,
-    vignetteEdge: sg.vignetteEdge || 'rgba(5, 12, 28, 0.5)',
-  };
 }
 
 document.addEventListener('DOMContentLoaded', initDesign);

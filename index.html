@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a1628" />
+    <title>AnimeXplore — Watch Anime Online</title>
+    <meta name="description" content="Search and stream anime on AnimeXplore." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▶</text></svg>" />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+    <div id="sg-global-bg" aria-hidden="true"></div>
+
+    <div id="proxyBanner" class="proxy-banner hidden">
+        API unavailable — run <code>npm start</code> locally or deploy to Vercel.
+    </div>
+
+    <header class="site-header">
+        <a href="#" class="brand" id="navHome">Anime<span class="g">Xplore</span></a>
+
+        <div class="search-wrap">
+            <span class="search-icon">⌕</span>
+            <input type="search" id="searchInput" class="search-input"
+                placeholder="Search anime..." autocomplete="off" />
+            <div id="searchDropdown" class="search-dropdown hidden"></div>
+        </div>
+
+        <nav class="header-nav">
+            <button class="header-link active" id="navHomeBtn">Home</button>
+            <button class="header-link" id="navBrowse">Browse</button>
+        </nav>
+    </header>
+
+    <div class="page">
+        <div class="content">
+            <section id="homeView" class="view">
+                <h2 class="page-title s-label">Trending Anime</h2>
+                <div id="homeGrid" class="anime-grid"></div>
+            </section>
+
+            <section id="seriesView" class="view hidden">
+                <div id="seriesError" class="error-banner hidden"></div>
+                <div id="seriesLoading" class="loading hidden">
+                    <div class="spinner"></div><span>Loading…</span>
+                </div>
+
+                <div id="seriesInfo">
+                    <!-- Watch zone: player first (anikoto style) -->
+                    <div class="watch-zone glass-panel" id="playerWrap">
+                        <div class="player-screen">
+                            <iframe id="playerIframe" class="hidden" allowfullscreen scrolling="no"
+                                referrerpolicy="no-referrer-when-downgrade"></iframe>
+                            <div class="player-placeholder" id="playerPlaceholder">
+                                Select an episode below to start watching
+                            </div>
+                        </div>
+
+                        <div class="player-toolbar">
+                            <div class="toolbar-left">
+                                <button class="tool-btn" id="prevEpBtn" title="Previous">◀ Prev</button>
+                                <button class="tool-btn" id="nextEpBtn" title="Next">Next ▶</button>
+                                <label class="tool-check"><input type="checkbox" id="autoNext" checked> Auto Next</label>
+                            </div>
+                            <div class="toolbar-right">
+                                <button class="tool-btn" id="subBtn">SUB</button>
+                                <button class="tool-btn" id="dubBtn">DUB</button>
+                            </div>
+                        </div>
+
+                        <div class="server-panel">
+                            <div class="watching-msg" id="watchingMsg">You're watching Episode —</div>
+                            <div class="server-groups">
+                                <div class="server-group">
+                                    <span class="server-label">SUB</span>
+                                    <div class="server-btns" id="subServers"></div>
+                                </div>
+                                <div class="server-group">
+                                    <span class="server-label">DUB</span>
+                                    <div class="server-btns" id="dubServers"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Episode list -->
+                    <div class="episodes-panel glass-panel">
+                        <div class="episodes-toolbar">
+                            <select id="epLangFilter" class="ep-select">
+                                <option value="all">Sub &amp; Dub</option>
+                                <option value="sub">Sub</option>
+                                <option value="dub">Dub</option>
+                            </select>
+                            <select id="epRange" class="ep-select"></select>
+                            <input type="number" id="epFind" class="ep-find" placeholder="Find number" min="1" />
+                        </div>
+                        <div id="episodeGrid" class="episode-list"></div>
+                    </div>
+
+                    <!-- Series detail (anikoto info page style) -->
+                    <div class="detail-panel glass-card">
+                        <div class="detail-main">
+                            <div class="detail-poster" id="seriesPoster"></div>
+                            <div class="detail-body">
+                                <h1 id="seriesTitle">—</h1>
+                                <div class="detail-tags" id="seriesBadges"></div>
+                                <p class="detail-desc" id="seriesDesc"></p>
+                                <button class="read-more hidden" id="readMore">Read more</button>
+                                <div class="meta-grid" id="metaGrid"></div>
+                            </div>
+                            <div class="rating-card" id="ratingCard">
+                                <div class="rating-score" id="ratingScore">—</div>
+                                <div class="rating-stars" id="ratingStars"></div>
+                                <p class="rating-hint">What do you think about this anime?</p>
+                            </div>
+                        </div>
+
+                        <div class="franchise-section hidden" id="franchiseSection">
+                            <h3 class="franchise-heading s-label">Seasons &amp; Movies</h3>
+                            <div class="franchise-scroll">
+                                <div class="franchise-track" id="franchiseTrack"></div>
+                            </div>
+                            <div class="franchise-dots" id="franchiseDots"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <aside class="sidebar-related glass-panel">
+            <h3 class="sidebar-title s-label">Related</h3>
+            <div class="sidebar-controls">
+                <button class="tool-btn sm" id="prevPage">←</button>
+                <span id="pageInfo" class="page-info"></span>
+                <button class="tool-btn sm" id="nextPage">→</button>
+            </div>
+            <ul id="recentList" class="related-list">
+                <li class="loading"><div class="spinner"></div></li>
+            </ul>
+        </aside>
+    </div>
+
+    <!-- DevTools block overlay -->
+    <div id="dt-block" aria-hidden="true">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+        </svg>
+        <h2>Access Restricted</h2>
+        <p>This function is not allowed here.</p>
+        <p class="dt-block-hint">Please close Developer Tools to continue watching.</p>
+    </div>
+
+    <script src="js/cache.js"></script>
+    <script src="js/shape-grid.js"></script>
+    <script src="js/design.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // DevTools + right-click protection
+        (function () {
+            var elDtBlock = document.getElementById('dt-block');
+
+            function showBlock() {
+                try { alert('This function is not allowed here.'); } catch (_) {}
+            }
+
+            document.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+                showBlock();
+            }, true);
+
+            document.addEventListener('keydown', function (e) {
+                var key = e.key || '';
+                if (key === 'F12') { e.preventDefault(); showBlock(); return; }
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I', 'J', 'C', 'K', 'E'].indexOf(key.toUpperCase()) !== -1) {
+                    e.preventDefault(); showBlock(); return;
+                }
+                if ((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'u') { e.preventDefault(); showBlock(); return; }
+                if (e.metaKey && e.altKey && ['i', 'j', 'c', 'u'].indexOf(key.toLowerCase()) !== -1) {
+                    e.preventDefault(); showBlock();
+                }
+            }, true);
+
+            var dtOpen = false;
+            setInterval(function () {
+                var wDiff = Math.abs(window.outerWidth - window.innerWidth);
+                var hDiff = Math.abs(window.outerHeight - window.innerHeight);
+                var isOpen = wDiff > 160 || hDiff > 160;
+                if (isOpen === dtOpen) return;
+                dtOpen = isOpen;
+                if (dtOpen) { elDtBlock.classList.add('show'); showBlock(); }
+                else { elDtBlock.classList.remove('show'); }
+            }, 3000);
+        })();
+    </script>
+</body>
+
+</html>

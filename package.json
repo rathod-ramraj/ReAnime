@@ -1,0 +1,17 @@
+{
+  "name": "animexplore",
+  "version": "1.0.0",
+  "description": "AnimeXplore — anime streaming with Anikoto + MegaPlay",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "vercel-build": "echo 'Static + serverless — no build step'"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

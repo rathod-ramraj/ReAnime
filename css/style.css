@@ -2030,7 +2030,7 @@ html.perf-streaming .brand-name { animation: none; }
   padding: 12px 16px;
 }
 
-/* Site footer — SaaS premium */
+/* Site footer */
 .site-footer {
   position: relative;
   z-index: 2;
@@ -2038,9 +2038,41 @@ html.perf-streaming .brand-name { animation: none; }
   padding: 64px 0 calc(40px + env(safe-area-inset-bottom));
   background: #050505;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
 }
 
-.footer-inner { padding-top: 0; padding-bottom: 0; }
+.footer-bg {
+  position: absolute;
+  inset: 0;
+  background: url('/bg-footer.jpg') right bottom / 100% auto no-repeat;
+  pointer-events: none;
+}
+
+.footer-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 5, 0.22);
+}
+
+.footer-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    #050505 0%,
+    #050505 20%,
+    rgba(5, 5, 5, 0.75) 45%,
+    rgba(5, 5, 5, 0.2) 70%,
+    transparent 100%);
+}
+
+.footer-inner {
+  position: relative;
+  z-index: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+}
 
 .footer-top {
   display: grid;
@@ -2390,6 +2422,12 @@ html.perf-streaming .brand-name { animation: none; }
   .section-title, .section-title-gold { font-size: 17px; margin-bottom: 14px; }
   .footer-top { grid-template-columns: 1fr; }
   .site-footer { padding: 32px 0 calc(80px + env(safe-area-inset-bottom)); margin-top: 8px; }
+  .footer-bg {
+    background-position: right bottom;
+    background-size: auto 100%;
+    min-height: 180px;
+  }
+  .footer-bg::before { background: rgba(5, 5, 5, 0.28); }
   .footer-top { gap: 24px; padding-bottom: 28px; }
   .footer-az { padding: 24px 0 20px; }
 }

@@ -243,15 +243,16 @@ function createResolver({ cache, upstream }) {
     return result;
   }
 
-  async function searchAniList(title) {
-    const key = `anilist:${title.toLowerCase()}`;
+  async function getAniListByMalId(malId) {
+    const key = `anilist:mal:${malId}`;
     const cached = cache.get(key);
     if (cached) return cached;
 
     const query = `
-      query ($search: String) {
-        Media(search: $search, type: ANIME, sort: POPULARITY_DESC) {
-          id idMal
+      query ($malId: Int) {
+        Media(idMal: $malId, type: ANIME) {
+          id
+          idMal
           title { romaji english }
           episodes
         }
@@ -260,7 +261,7 @@ function createResolver({ cache, upstream }) {
     const res = await fetch(upstream.anilist, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables: { search: title } }),
+      body: JSON.stringify({ query, variables: { malId: parseInt(malId, 10) } }),
     });
     if (!res.ok) throw new Error(`AniList HTTP ${res.status}`);
     const json = await res.json();
@@ -281,8 +282,8 @@ function createResolver({ cache, upstream }) {
       let streamMethod = 'mal';
 
       const [seriesId, aniMedia] = await Promise.all([
-        findSeriesByMal(malId, 6).catch(() => null),
-        searchAniList(enriched.title).catch(() => null),
+        findSeriesByMal(malId, 16).catch(() => null),
+        getAniListByMalId(malId).catch(() => null),
       ]);
 
       if (seriesId) {
@@ -324,8 +325,12 @@ function createResolver({ cache, upstream }) {
     const { anime, episodes: rawEps } = await getSeries(seriesId);
     const norm = normalizeAnikotoAnime(anime);
     norm.seriesId = seriesId;
+    if (norm.malId && !norm.aniId) {
+      const aniMedia = await getAniListByMalId(norm.malId).catch(() => null);
+      if (aniMedia?.id) norm.aniId = aniMedia.id;
+    }
     const episodes = normalizeEpisodes(rawEps);
-    const streamMethod = episodes.some((e) => e.embedId) ? 'embed' : norm.malId ? 'mal' : 'ani';
+    const streamMethod = episodes.some((e) => e.embedId) ? 'embed' : norm.aniId ? 'ani' : norm.malId ? 'mal' : 'mal';
 
     const result = { anime: norm, episodes, streamMethod, cachedAt: Date.now() };
     cache.set(key, result, TTL.resolve);

@@ -1076,6 +1076,13 @@ html.perf-streaming .brand-name { animation: none; }
   border-radius: var(--r-lg);
 }
 
+.page.series-mode .watch-zone {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 200;
+  background: #050505;
+}
+
 .player-screen {
   position: relative;
   padding-top: 56.25%;
@@ -2330,16 +2337,17 @@ html.perf-streaming .brand-name { animation: none; }
     border-right: none;
     margin-bottom: 0;
   }
-  .page.series-mode .watch-zone { margin-bottom: 0; }
+  .page.series-mode .watch-zone {
+    margin-bottom: 0;
+    position: sticky;
+    top: var(--header-h);
+    z-index: 200;
+  }
 
   .mobile-watch-bar {
     display: block;
     padding: 10px 16px;
-    position: sticky;
-    top: var(--header-h);
-    z-index: 100;
     background: rgba(5, 5, 5, 0.95);
-    backdrop-filter: blur(12px);
   }
 
   .player-toolbar {

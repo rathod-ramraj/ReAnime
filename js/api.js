@@ -67,9 +67,9 @@ const API = {
     return result;
   },
 
-  buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub' }) {
+  buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub', variant = 's-2' }) {
     if (method === 'embed' && embedId) {
-      return `${this.MEGAPLAY}/s-2/${embedId}/${lang}`;
+      return `${this.MEGAPLAY}/${variant}/${embedId}/${lang}`;
     }
     if (method === 'mal' && malId) {
       return `${this.MEGAPLAY}/mal/${malId}/${episode}/${lang}`;

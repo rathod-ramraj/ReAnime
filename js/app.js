@@ -20,6 +20,10 @@ const state = {
   searchResults: [],
   searchOpen: false,
   searchIndex: -1,
+  searchMode: false,
+  playerScrolled: false,
+  streamFailTimer: null,
+  streamAttempt: 0,
 };
 
 const CATEGORY_LABELS = {
@@ -154,6 +158,9 @@ const els = {
   mobileSearchResults: $('#mobileSearchResults'),
   mobileSearchClose: $('#mobileSearchClose'),
   mobileBrowseBar: $('#mobileBrowseBar'),
+  searchResultsSection: $('#searchResultsSection'),
+  searchResultsTitle: $('#searchResultsTitle'),
+  searchResultsGrid: $('#searchResultsGrid'),
   installPrompt: $('#installPrompt'),
   installPromptClose: $('#installPromptClose'),
   installPromptBtn: $('#installPromptBtn'),
@@ -364,7 +371,7 @@ function renderMobileSearchResults() {
 function syncMobileBrowseBar() {
   const bar = els.mobileBrowseBar;
   if (!bar) return;
-  const show = isMobileView() && state.view === 'home' && state.homeCategory !== 'library';
+  const show = isMobileView() && state.view === 'home' && state.homeCategory === 'home' && !state.searchMode;
   bar.classList.toggle('hidden', !show);
   bar.querySelectorAll('.mob-chip').forEach((chip) => {
     chip.classList.toggle('active', chip.dataset.cat === state.homeCategory);
@@ -677,8 +684,11 @@ function setHomeCategory(cat) {
     btn.classList.toggle('active', btn.dataset.cat === cat);
   });
 
+  if (cat === 'home') exitSearchMode();
+
   const isHome = cat === 'home';
   els.heroSection?.classList.toggle('hidden', !isHome);
+  els.searchResultsSection?.classList.toggle('hidden', !state.searchMode);
   els.homeTrendingSection?.classList.toggle('hidden', !isHome);
   els.homePopularSection?.classList.toggle('hidden', !isHome);
   els.homeAiringSection?.classList.toggle('hidden', !isHome);
@@ -876,7 +886,21 @@ function openSpotlightAnime(watchNow = true) {
     return;
   }
   openSearchResult(a, { autoPlay: false, scrollToPlayer: false });
-  setTimeout(() => scrollToDetail(), 600);
+}
+
+function rankSearchResults(query, items) {
+  const q = query.toLowerCase().trim();
+  return [...items].sort((a, b) => {
+    const ta = (a.title || '').toLowerCase();
+    const tb = (b.title || '').toLowerCase();
+    const score = (t) => {
+      if (t === q) return 0;
+      if (t.startsWith(q)) return 1;
+      if (t.includes(q)) return 2;
+      return 3;
+    };
+    return score(ta) - score(tb);
+  });
 }
 
 async function onSearchInput(e) {
@@ -885,27 +909,106 @@ async function onSearchInput(e) {
   if (q.length < 2) {
     state.searchResults = [];
     state.searchOpen = false;
+    if (state.searchMode) exitSearchMode();
     renderSearchDropdown();
     return;
   }
+
+  const applyResults = (items) => {
+    state.searchResults = rankSearchResults(q, items);
+    state.searchOpen = true;
+    state.searchIndex = -1;
+    showSearchResultsView(q);
+    renderSearchDropdown();
+  };
 
   const cached = Cache.getSearch(q);
   if (cached) {
-    state.searchResults = cached.items.map(API.normalizeJikanAnime);
-    state.searchOpen = true;
-    renderSearchDropdown();
+    applyResults(cached.items.map(API.normalizeJikanAnime));
+    API.searchAnime(q).then(({ items }) => {
+      if (state.searchQuery !== q) return;
+      applyResults(items.map(API.normalizeJikanAnime));
+    }).catch(() => {});
     return;
   }
 
+  els.searchResultsGrid.innerHTML = Array(8).fill('<div class="skeleton-card"></div>').join('');
+  showSearchResultsView(q);
+
   try {
     const { items } = await API.searchAnime(q);
-    state.searchResults = items.map(API.normalizeJikanAnime);
-    state.searchOpen = true;
-    renderSearchDropdown();
+    if (state.searchQuery !== q) return;
+    applyResults(items.map(API.normalizeJikanAnime));
   } catch {
-    state.searchResults = [];
-    renderSearchDropdown();
+    if (state.searchQuery === q) {
+      state.searchResults = [];
+      renderSearchResultsGrid();
+      renderSearchDropdown();
+    }
   }
+}
+
+function showSearchResultsView(query) {
+  state.searchMode = true;
+  if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) {
+    renderMobileSearchResults();
+    return;
+  }
+  if (state.view !== 'home') showView('home');
+  document.querySelectorAll('.nav-cat').forEach((b) => b.classList.remove('active'));
+
+  els.heroSection?.classList.add('hidden');
+  els.homeTrendingSection?.classList.add('hidden');
+  els.homePopularSection?.classList.add('hidden');
+  els.homeAiringSection?.classList.add('hidden');
+  els.continueSection?.classList.add('hidden');
+  els.categorySection?.classList.add('hidden');
+  els.mobileBrowseBar?.classList.add('hidden');
+
+  els.searchResultsSection?.classList.remove('hidden');
+  revealSection(els.searchResultsSection);
+  if (els.searchResultsTitle) {
+    els.searchResultsTitle.textContent = `Results for “${query}”`;
+  }
+  renderSearchResultsGrid();
+  syncMobileBrowseBar();
+}
+
+function exitSearchMode() {
+  state.searchMode = false;
+  state.searchQuery = '';
+  state.searchResults = [];
+  els.searchResultsSection?.classList.add('hidden');
+  els.mobileBrowseBar?.classList.remove('hidden');
+}
+
+function renderSearchResultsGrid() {
+  if (!els.searchResultsGrid) return;
+  const items = state.searchResults;
+  if (!items.length) {
+    els.searchResultsGrid.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-state-icon">⌕</span>
+        <h4>No results found</h4>
+        <p>Try a different spelling or shorter keywords.</p>
+      </div>`;
+    return;
+  }
+
+  els.searchResultsGrid.innerHTML = items.map((a, i) => `
+    <article class="category-card search-result-card" data-idx="${i}" data-mal="${a.malId}">
+      <div class="category-poster">${imgTag(a.poster, a.title)}</div>
+      <div class="category-info">
+        <h3>${esc(a.title)}</h3>
+        <p>${[a.type || 'Anime', a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ')}</p>
+      </div>
+    </article>`).join('');
+
+  els.searchResultsGrid.querySelectorAll('.search-result-card').forEach((card) => {
+    const idx = parseInt(card.dataset.idx, 10);
+    card.addEventListener('click', () => openSearchResult(items[idx], { autoPlay: true, scrollToPlayer: true }));
+    card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
+  });
 }
 
 function renderSearchDropdown() {
@@ -942,6 +1045,15 @@ function renderSearchDropdown() {
 }
 
 function onSearchKeydown(e) {
+  if (e.key === 'Enter' && state.searchQuery.length >= 2) {
+    e.preventDefault();
+    if (state.searchResults.length && state.searchIndex >= 0) {
+      openSearchResult(state.searchResults[state.searchIndex], { autoPlay: true, scrollToPlayer: true });
+    } else {
+      showSearchResultsView(state.searchQuery);
+    }
+    return;
+  }
   if (!state.searchOpen || !state.searchResults.length) return;
   if (e.key === 'ArrowDown') {
     e.preventDefault();
@@ -951,12 +1063,13 @@ function onSearchKeydown(e) {
     e.preventDefault();
     state.searchIndex = Math.max(state.searchIndex - 1, 0);
     renderSearchDropdown();
-  } else if (e.key === 'Enter' && state.searchIndex >= 0) {
-    e.preventDefault();
-    openSearchResult(state.searchResults[state.searchIndex]);
   } else if (e.key === 'Escape') {
     state.searchOpen = false;
+    exitSearchMode();
+    els.searchInput.value = '';
+    if (els.mobileSearchInput) els.mobileSearchInput.value = '';
     renderSearchDropdown();
+    setHomeCategory('home');
   }
 }
 
@@ -978,21 +1091,23 @@ function applyResolvedData(result, opts = {}) {
   setMobileDetailCollapsed(isMobileView());
   updatePageTitle(anime.title, null);
   if (opts.autoPlay === false) {
-    requestAnimationFrame(() => scrollToPlayer('instant'));
-    setTimeout(() => scrollToPlayer('instant'), 100);
+    pinPlayerOnce();
     return;
   }
   const firstEp = getFirstEpisodeNumber();
   const delay = isMobileView() ? 550 : 450;
-  setTimeout(() => playEpisode(firstEp, opts.scrollToPlayer !== false), delay);
+  const shouldScroll = opts.scrollToPlayer !== false;
+  setTimeout(() => playEpisode(firstEp, shouldScroll), delay);
 }
 
 async function openSearchResult(anime, opts = {}) {
   state.searchOpen = false;
+  exitSearchMode();
   els.searchInput.value = '';
   if (els.mobileSearchInput) els.mobileSearchInput.value = '';
   closeMobileSearch();
   renderSearchDropdown();
+  state.playerScrolled = false;
   showView('series');
   els.seriesError.classList.add('hidden');
 
@@ -1015,6 +1130,7 @@ async function openSearchResult(anime, opts = {}) {
 }
 
 async function openAnikotoSeries(seriesId) {
+  state.playerScrolled = false;
   showView('series');
   els.seriesError.classList.add('hidden');
 
@@ -1299,13 +1415,11 @@ function renderEpisodeGrid() {
   });
 
   const activeBtn = els.episodeGrid.querySelector('.episode-btn.active');
-  if (activeBtn) {
+  const list = els.episodeGrid;
+  if (activeBtn && list) {
     setTimeout(() => {
-      activeBtn.scrollIntoView({
-        block: 'nearest',
-        inline: 'center',
-        behavior: 'smooth',
-      });
+      const left = activeBtn.offsetLeft - list.clientWidth / 2 + activeBtn.offsetWidth / 2;
+      list.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
     }, 80);
   }
 }
@@ -1343,12 +1457,18 @@ function renderServerButtons() {
   render(els.dubServers, 'dub');
 }
 
-function tryStreamMethod(method, ep, lang) {
+function tryStreamMethod(method, ep, lang, variant) {
   const a = state.currentAnime;
   const epNum = Number(ep.number);
   if (method === 'embed') {
-    if (ep.embedId) return { url: API.buildStreamUrl({ method: 'embed', embedId: ep.embedId, lang }), method: 'embed' };
-    if (ep.embedUrl?.[lang]) return { url: ep.embedUrl[lang], method: 'embed' };
+    if (ep.embedId) {
+      return { url: API.buildStreamUrl({ method: 'embed', embedId: ep.embedId, lang, variant }), method: 'embed', variant };
+    }
+    if (ep.embedUrl) {
+      if (typeof ep.embedUrl === 'string') return { url: ep.embedUrl, method: 'embed' };
+      if (ep.embedUrl[lang]) return { url: ep.embedUrl[lang], method: 'embed' };
+      if (ep.embedUrl.sub) return { url: ep.embedUrl.sub, method: 'embed' };
+    }
   }
   if (method === 'ani' && a.aniId) {
     return { url: API.buildStreamUrl({ method: 'ani', aniId: a.aniId, episode: epNum, lang }), method: 'ani' };
@@ -1359,17 +1479,36 @@ function tryStreamMethod(method, ep, lang) {
   return null;
 }
 
-function resolveStreamUrl(ep, lang, method) {
-  const a = state.currentAnime;
-  if (!ep || !a) return null;
+function buildStreamChain(ep, lang, preferred) {
+  if (!ep || !state.currentAnime) return [];
+  const methods = [...new Set([preferred || state.streamMethod, 'embed', 'mal', 'ani'])];
+  const variants = ['s-2', 's-1'];
+  const chain = [];
+  const seen = new Set();
 
-  const preferred = method || state.streamMethod;
-  const chain = [...new Set([preferred, 'embed', 'mal', 'ani'])];
-  for (const m of chain) {
-    const hit = tryStreamMethod(m, ep, lang);
-    if (hit?.url) return hit;
+  for (const m of methods) {
+    if (m === 'embed') {
+      for (const v of variants) {
+        const hit = tryStreamMethod('embed', ep, lang, v);
+        if (hit?.url && !seen.has(hit.url)) {
+          seen.add(hit.url);
+          chain.push(hit);
+        }
+      }
+    } else {
+      const hit = tryStreamMethod(m, ep, lang);
+      if (hit?.url && !seen.has(hit.url)) {
+        seen.add(hit.url);
+        chain.push(hit);
+      }
+    }
   }
-  return null;
+  return chain;
+}
+
+function resolveStreamUrl(ep, lang, method) {
+  const chain = buildStreamChain(ep, lang, method);
+  return chain[0] || null;
 }
 
 function findEpisode(epNum) {
@@ -1379,7 +1518,15 @@ function findEpisode(epNum) {
   return state.episodes.find((e) => Number(e.number) === num) || null;
 }
 
-function loadPlayer(url) {
+function clearStreamFailTimer() {
+  if (state.streamFailTimer) {
+    clearTimeout(state.streamFailTimer);
+    state.streamFailTimer = null;
+  }
+}
+
+function loadPlayer(url, fallbackChain = []) {
+  clearStreamFailTimer();
   els.playerPlaceholder.classList.remove('hidden');
   setPlayerPlaceholder('Loading…');
   els.playerIframe.classList.add('hidden');
@@ -1387,6 +1534,7 @@ function loadPlayer(url) {
 
   const load = () => {
     els.playerIframe.onload = () => {
+      clearStreamFailTimer();
       els.playerIframe.classList.remove('hidden');
       els.playerPlaceholder.classList.add('hidden');
       els.playerIframe.onload = null;
@@ -1397,9 +1545,26 @@ function loadPlayer(url) {
       els.playerIframe.classList.remove('hidden');
       els.playerPlaceholder.classList.add('hidden');
     }, 2500);
+
+    if (fallbackChain.length > 1) {
+      state.streamFailTimer = setTimeout(() => tryNextStream(fallbackChain, url), 4500);
+    }
   };
 
-  setTimeout(load, 200);
+  setTimeout(load, 120);
+}
+
+function tryNextStream(chain, currentUrl) {
+  const idx = chain.findIndex((s) => s.url === currentUrl);
+  const next = chain[idx + 1];
+  if (!next) {
+    setPlayerPlaceholder('Stream unavailable — try another server below.');
+    return;
+  }
+  state.streamMethod = next.method;
+  state.streamAttempt += 1;
+  renderServerButtons();
+  loadPlayer(next.url, chain);
 }
 
 function getHeaderHeight() {
@@ -1410,12 +1575,14 @@ function getHeaderHeight() {
   return h;
 }
 
-function scrollToPlayer(behavior = 'smooth') {
+function pinPlayerOnce() {
+  if (state.playerScrolled || state.view !== 'series') return;
+  state.playerScrolled = true;
   const target = els.playerWrap;
   if (!target) return;
-  const offset = getHeaderHeight() + 12;
+  const offset = getHeaderHeight() + 8;
   const top = target.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top: Math.max(0, top), behavior });
+  window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
 }
 
 function scrollToDetail() {
@@ -1447,14 +1614,12 @@ function playEpisode(epNum, scrollToPlayerView = true) {
     if (els.epRange) els.epRange.value = String(rangeStart);
   }
 
-  let stream = resolveStreamUrl(ep, state.language, state.streamMethod);
-  if (!stream?.url) {
-    stream = resolveStreamUrl(ep, state.language);
-    if (stream) state.streamMethod = stream.method;
-  }
+  const chain = buildStreamChain(ep, state.language, state.streamMethod);
+  const stream = chain[0] || null;
+  if (stream) state.streamMethod = stream.method;
 
   if (stream?.url) {
-    loadPlayer(stream.url);
+    loadPlayer(stream.url, chain);
   } else {
     els.playerIframe.src = 'about:blank';
     els.playerIframe.classList.add('hidden');
@@ -1470,17 +1635,13 @@ function playEpisode(epNum, scrollToPlayerView = true) {
 
   saveWatchProgress();
 
-  if (scrollToPlayerView) {
-    scrollToPlayer();
-    setTimeout(() => scrollToPlayer('instant'), 400);
-    if (isMobileView()) setTimeout(() => scrollToPlayer('instant'), 800);
-  }
+  if (scrollToPlayerView) pinPlayerOnce();
 }
 
 function playAdjacent(dir) {
   const idx = state.episodes.findIndex((e) => Number(e.number) === Number(state.currentEpisode));
   const next = state.episodes[idx + dir];
-  if (next) playEpisode(next.number, true);
+  if (next) playEpisode(next.number, false);
 }
 
 function setLanguage(lang) {
@@ -1504,10 +1665,7 @@ function updateNavButtons() {
 function setLoading(on) {
   els.seriesInfo?.classList.toggle('hidden', on);
   $('#seriesLoading')?.classList.toggle('hidden', !on);
-  if (!on && state.view === 'series') {
-    requestAnimationFrame(() => scrollToPlayer('instant'));
-    setTimeout(() => scrollToPlayer('instant'), 150);
-  }
+
 }
 
 function showSeriesError(msg, retryFn) {
@@ -1551,10 +1709,7 @@ function showView(view) {
     prevEl?.classList.add('hidden');
     prevEl?.classList.remove('view-leaving');
     nextEl?.classList.remove('hidden');
-    if (view === 'series') {
-      requestAnimationFrame(() => scrollToPlayer('instant'));
-      setTimeout(() => scrollToPlayer('instant'), 350);
-    }
+    if (view === 'series') requestAnimationFrame(() => pinPlayerOnce());
   }, 280);
 
   state.view = view;

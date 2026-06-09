@@ -953,9 +953,60 @@ html.perf-streaming .brand-name { animation: none; }
 .category-card:nth-child(16) { animation-delay: 0.48s; }
 
 .category-poster {
+  position: relative;
   aspect-ratio: 2/3;
   overflow: hidden;
   background: var(--player-bg);
+}
+
+.card-dl-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: rgba(5, 5, 5, 0.78);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.category-card:hover .card-dl-btn,
+.trending-card:hover .card-dl-btn,
+.continue-card:hover .card-dl-btn { opacity: 1; }
+.card-dl-btn:hover {
+  background: var(--accent-blue);
+  transform: scale(1.06);
+}
+.trending-card { position: relative; }
+.trending-card .card-dl-btn { top: 6px; right: 6px; width: 30px; height: 30px; }
+.continue-poster { position: relative; }
+
+.header-link.nav-dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.header-link.nav-dl svg { flex-shrink: 0; }
+.header-link.nav-dl .download-badge { margin-left: 2px; }
+
+.mob-nav-item { position: relative; }
+.mob-nav-item .mob-dl-badge {
+  position: absolute;
+  top: 2px;
+  right: calc(50% - 20px);
+  margin: 0;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  font-size: 9px;
 }
 
 .category-poster img {
@@ -1315,6 +1366,162 @@ html.perf-streaming .brand-name { animation: none; }
 }
 .ep-row:hover .ep-play { color: var(--text-3); }
 .ep-row.active .ep-play { color: #fff; }
+
+.ep-download {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin-right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.ep-row:hover .ep-download,
+.ep-row.active .ep-download { opacity: 1; }
+.ep-download:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--highlight);
+}
+.ep-row.active .ep-download:hover {
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+}
+
+.episodes-download-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--glass-border-2);
+}
+.tool-btn.hidden { display: none; }
+
+/* Downloads page */
+.downloads-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.downloads-hint {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.download-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.download-item {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+.download-item-poster {
+  width: 56px;
+  height: 76px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.download-item-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.download-item-ph {
+  font-size: 18px;
+  opacity: 0.35;
+}
+.download-item-body h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.download-item-body p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.download-progress {
+  height: 4px;
+  margin: 10px 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.download-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--grad-brand);
+  transition: width 0.35s var(--ease);
+}
+.download-status { font-size: 12px; color: var(--text-3); }
+.download-status-downloading { color: var(--highlight); }
+.download-status-done { color: #6ee7a0; }
+.download-status-failed { color: #f87171; }
+.download-item-remove {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.download-item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.download-retry { padding: 4px 10px; font-size: 11px; }
+.download-item-remove:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+.download-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--grad-brand);
+  color: #fff;
+  vertical-align: middle;
+}
+.download-badge.hidden { display: none; }
+
+.tool-btn svg {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
 
 /* Pulsing "now playing" left-border on the active episode row */
 .ep-row.active {
@@ -2410,10 +2617,28 @@ html.perf-streaming .brand-name { animation: none; }
     font-size: 14px;
   }
   .ep-name, .ep-play { display: none; }
+  .ep-download { display: none; }
+
+  .card-dl-btn { opacity: 1; width: 28px; height: 28px; top: 6px; right: 6px; }
+  .card-dl-btn svg { width: 14px; height: 14px; }
+
+  .mob-nav-item span { font-size: 10px; }
   .ep-row.active {
     box-shadow: none;
     border-color: var(--accent-blue);
   }
+
+  .episodes-download-bar {
+    padding: 10px 12px;
+    gap: 8px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .download-item {
+    grid-template-columns: 48px 1fr auto;
+    padding: 12px;
+  }
+  .download-item-poster { width: 48px; height: 64px; }
 
   .mobile-info-toggle { display: block; }
   .detail-panel { padding: 0; }

@@ -36,6 +36,76 @@ const CATEGORY_LABELS = {
 
 const $ = (sel) => document.querySelector(sel);
 
+const DL_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+
+function cardDownloadBtn(label) {
+  return `<button type="button" class="card-dl-btn" aria-label="${esc(label)}" title="Download">${DL_ICON}</button>`;
+}
+
+function categoryCardHtml(a, i, extraClass = '') {
+  const meta = [a.type || a.raw?.type || 'Anime', a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ');
+  return `
+    <article class="category-card${extraClass ? ` ${extraClass}` : ''}" data-mal="${a.malId || ''}" data-series="${a.seriesId || ''}" data-idx="${i}">
+      <div class="category-poster">
+        ${imgTag(a.poster, a.title)}
+        ${cardDownloadBtn(`Download ${a.title}`)}
+      </div>
+      <div class="category-info">
+        <h3>${esc(a.title)}</h3>
+        <p>${meta}</p>
+      </div>
+    </article>`;
+}
+
+function wireCategoryCards(container, items, onOpen) {
+  container.querySelectorAll('.category-card').forEach((card) => {
+    const idx = parseInt(card.dataset.idx, 10);
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.card-dl-btn')) return;
+      onOpen(items[idx], idx);
+    });
+    card.querySelector('.card-dl-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      queueCardDownload(items[idx]);
+    });
+    card.addEventListener('mouseenter', () => {
+      const mal = parseInt(card.dataset.mal, 10);
+      if (mal) API.prefetchResolve(mal);
+    });
+  });
+}
+
+async function queueCardDownload(item, epNum = null) {
+  if (!item?.malId && !item?.seriesId) {
+    showToast('Cannot download this title', 'error');
+    return;
+  }
+  showToast('Adding to download queue…', 'info');
+  try {
+    const result = item.seriesId
+      ? await API.resolveBySeriesId(item.seriesId)
+      : await API.resolveByMalId(item.malId);
+    const { anime, episodes } = API.applyResolveResult(result);
+    const num = epNum || episodes[0]?.number || 1;
+    const ep = episodes.find((e) => Number(e.number) === Number(num)) || episodes[0] || { number: num };
+    DownloadManager.addToQueue({
+      anime,
+      episode: ep.number,
+      lang: anime.hasSub !== false ? 'sub' : 'dub',
+      epData: ep,
+      streamMethod: null,
+    });
+    showToast(`Queued ${anime.title}`, 'success');
+  } catch (err) {
+    showToast(err.message || 'Download failed', 'error');
+  }
+}
+
+function setNavDownloadsActive(on) {
+  els.navDownloads?.classList.toggle('active', on);
+  if (on) document.querySelectorAll('.nav-cat').forEach((b) => b.classList.remove('active'));
+}
+
 function isMobileView() {
   return window.matchMedia('(max-width: 900px)').matches
     || (window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1024);
@@ -161,6 +231,12 @@ const els = {
   searchResultsSection: $('#searchResultsSection'),
   searchResultsTitle: $('#searchResultsTitle'),
   searchResultsGrid: $('#searchResultsGrid'),
+  downloadsSection: $('#downloadsSection'),
+  downloadEpBtn: $('#downloadEpBtn'),
+  downloadAllBtn: $('#downloadAllBtn'),
+  openDownloadsBtn: $('#openDownloadsBtn'),
+  clearDownloadsBtn: $('#clearDownloadsBtn'),
+  navDownloads: $('#navDownloads'),
   installPrompt: $('#installPrompt'),
   installPromptClose: $('#installPromptClose'),
   installPromptBtn: $('#installPromptBtn'),
@@ -178,6 +254,8 @@ async function init() {
   initRevealObserver();
   initHeaderMenus();
   initInstallPrompt();
+  if (window.DownloadManager) DownloadManager.init();
+  window.showToast = showToast;
   bindEvents();
   renderAzGrid();
   renderContinueWatching();
@@ -252,8 +330,12 @@ function bindEvents() {
   els.navHome?.addEventListener('click', goHome);
 
   document.querySelectorAll('.nav-cat').forEach((btn) => {
-    btn.addEventListener('click', () => setHomeCategory(btn.dataset.cat));
+    btn.addEventListener('click', () => {
+      setNavDownloadsActive(false);
+      setHomeCategory(btn.dataset.cat);
+    });
   });
+  els.navDownloads?.addEventListener('click', showDownloadsView);
 
   els.heroPrev?.addEventListener('click', () => stepSpotlight(-1));
   els.heroNext?.addEventListener('click', () => stepSpotlight(1));
@@ -291,6 +373,7 @@ function bindEvents() {
       closeHeaderMenus();
       const action = btn.dataset.profile;
       if (action === 'library') { onMobileNav('library'); return; }
+      if (action === 'downloads') { showDownloadsView(); return; }
       if (action === 'continue') {
         showView('home');
         setHomeCategory('home');
@@ -319,6 +402,11 @@ function bindEvents() {
   els.mobileSearchClose?.addEventListener('click', closeMobileSearch);
 
   els.mobileInfoToggle?.addEventListener('click', toggleMobileDetail);
+
+  els.downloadEpBtn?.addEventListener('click', () => queueEpisodeDownload(state.currentEpisode));
+  els.downloadAllBtn?.addEventListener('click', queueAllDownloads);
+  els.openDownloadsBtn?.addEventListener('click', showDownloadsView);
+  els.clearDownloadsBtn?.addEventListener('click', () => DownloadManager?.clearCompleted());
 }
 
 function openMobileSearch() {
@@ -399,12 +487,71 @@ function onMobileNav(tab) {
   if (tab === 'home') { setHomeCategory('home'); showView('home'); return; }
   if (tab === 'search') { showView('home'); openMobileSearch(); return; }
   if (tab === 'browse') { showView('home'); setHomeCategory('popular'); return; }
+  if (tab === 'downloads') { showDownloadsView(); return; }
   if (tab === 'library') { showLibrary(); }
+}
+
+function showDownloadsView() {
+  closeHeaderMenus();
+  closeMobileSearch();
+  showView('home');
+  state.homeCategory = 'downloads';
+  setNavDownloadsActive(true);
+  els.heroSection?.classList.add('hidden');
+  els.homeTrendingSection?.classList.add('hidden');
+  els.homePopularSection?.classList.add('hidden');
+  els.homeAiringSection?.classList.add('hidden');
+  els.continueSection?.classList.add('hidden');
+  els.categorySection?.classList.add('hidden');
+  els.searchResultsSection?.classList.add('hidden');
+  els.mobileBrowseBar?.classList.add('hidden');
+  els.downloadsSection?.classList.remove('hidden');
+  revealSection(els.downloadsSection);
+  DownloadManager?.renderPanel();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mob === 'downloads');
+  });
+}
+
+function getEpisodeForDownload(epNum) {
+  const ep = findEpisode(epNum || state.currentEpisode);
+  if (ep) return ep;
+  const a = state.currentAnime;
+  if (!a) return null;
+  const num = Number(epNum || state.currentEpisode || 1);
+  return { number: num, embedId: null, title: a.title || `Episode ${num}` };
+}
+
+function queueEpisodeDownload(epNum, lang) {
+  if (!state.currentAnime) return;
+  const ep = getEpisodeForDownload(epNum);
+  if (!ep) {
+    showToast('Episode not found', 'error');
+    return;
+  }
+  const useLang = lang || state.language;
+  DownloadManager.addToQueue({
+    anime: state.currentAnime,
+    episode: ep.number,
+    lang: useLang,
+    epData: ep,
+    streamMethod: state.streamMethod,
+  });
+  showToast(`Queued Ep ${ep.number} for download`, 'success');
+}
+
+function queueAllDownloads() {
+  if (!state.currentAnime || !state.episodes.length) return;
+  const lang = state.language;
+  DownloadManager.addBulk(state.currentAnime, state.episodes, lang, state.streamMethod);
+  showToast(`Queued ${state.episodes.length} episodes`, 'success');
 }
 
 function showLibrary() {
   showView('home');
   state.homeCategory = 'library';
+  setNavDownloadsActive(false);
   document.querySelectorAll('.nav-cat').forEach((b) => b.classList.remove('active'));
   els.heroSection?.classList.add('hidden');
   els.homeTrendingSection?.classList.add('hidden');
@@ -412,11 +559,15 @@ function showLibrary() {
   els.homeAiringSection?.classList.add('hidden');
   els.continueSection?.classList.add('hidden');
   els.categorySection?.classList.remove('hidden');
+  els.downloadsSection?.classList.add('hidden');
   revealSection(els.categorySection);
   if (els.categoryTitle) els.categoryTitle.textContent = 'My Library';
   window.scrollTo({ top: 0, behavior: 'smooth' });
   syncMobileBrowseBar();
   renderLibraryGrid();
+  els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mob === 'library');
+  });
 }
 
 function renderLibraryGrid() {
@@ -432,23 +583,24 @@ function renderLibraryGrid() {
       </div>`;
     return;
   }
-  els.categoryGrid.innerHTML = merged.map((item, i) => `
-    <article class="category-card" data-idx="${i}" data-mal="${item.malId || ''}" data-series="${item.seriesId || ''}">
-      <div class="category-poster">
-        ${imgTag(item.poster, item.title)}
-      </div>
-      <div class="category-info">
-        <h3>${esc(item.title)}</h3>
-        <p>${item.episode ? `Episode ${item.episode}` : 'Bookmarked'}</p>
-      </div>
-    </article>`).join('');
+  els.categoryGrid.innerHTML = merged.map((item, i) => categoryCardHtml(
+    { ...item, type: item.episode ? `Ep ${item.episode}` : 'Bookmarked', year: '', score: null },
+    i,
+  )).join('');
 
+  wireCategoryCards(els.categoryGrid, merged, (item) => {
+    if (item.seriesId) openAnikotoSeries(parseInt(item.seriesId, 10));
+    else if (item.malId) openSearchResult({ malId: parseInt(item.malId, 10), title: item.title });
+  });
   els.categoryGrid.querySelectorAll('.category-card').forEach((card) => {
-    card.addEventListener('click', () => {
-      const idx = parseInt(card.dataset.idx, 10);
-      const item = merged[idx];
-      if (item.seriesId) openAnikotoSeries(parseInt(item.seriesId, 10));
-      else if (item.malId) openSearchResult({ malId: parseInt(item.malId, 10), title: item.title });
+    const idx = parseInt(card.dataset.idx, 10);
+    const btn = card.querySelector('.card-dl-btn');
+    if (!btn) return;
+    const clone = btn.cloneNode(true);
+    btn.replaceWith(clone);
+    clone.addEventListener('click', (e) => {
+      e.stopPropagation();
+      queueCardDownload(merged[idx], merged[idx].episode);
     });
   });
 }
@@ -474,6 +626,7 @@ async function filterByLetter(letter) {
   els.homeAiringSection?.classList.add('hidden');
   els.continueSection?.classList.add('hidden');
   els.categorySection?.classList.remove('hidden');
+  els.downloadsSection?.classList.add('hidden');
   revealSection(els.categorySection);
   if (els.categoryTitle) els.categoryTitle.textContent = letter === 'all' ? 'All Anime' : `Anime: ${letter}`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -513,6 +666,7 @@ function renderContinueWatching() {
       <article class="continue-card" data-idx="${i}">
         <div class="continue-poster">
           ${imgTag(item.poster, item.title)}
+          ${cardDownloadBtn(`Download ${item.title}`)}
         </div>
         <div class="continue-info">
           <h4>${esc(item.title)}</h4>
@@ -523,7 +677,15 @@ function renderContinueWatching() {
   }).join('');
 
   els.continueRow.querySelectorAll('.continue-card').forEach((card) => {
-    card.addEventListener('click', () => resumeWatch(items[parseInt(card.dataset.idx, 10)]));
+    const idx = parseInt(card.dataset.idx, 10);
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.card-dl-btn')) return;
+      resumeWatch(items[idx]);
+    });
+    card.querySelector('.card-dl-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      queueCardDownload(items[idx], items[idx].episode);
+    });
   });
 }
 
@@ -645,21 +807,8 @@ async function loadHomeGrid(type, gridEl) {
     const { items } = await API.getBrowse(type, 1);
     const slice = (items || []).slice(0, 12);
     if (!slice.length) { gridEl.innerHTML = ''; return; }
-    gridEl.innerHTML = slice.map((a, i) => `
-      <article class="category-card" data-mal="${a.malId}" data-idx="${i}">
-        <div class="category-poster">${imgTag(a.poster, a.title)}</div>
-        <div class="category-info">
-          <h3>${esc(a.title)}</h3>
-          <p>${[a.type || 'TV', a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ')}</p>
-        </div>
-      </article>`).join('');
-    gridEl.querySelectorAll('.category-card').forEach((card) => {
-      card.addEventListener('click', () => {
-        const idx = parseInt(card.dataset.idx, 10);
-        openSearchResult(slice[idx]);
-      });
-      card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
-    });
+    gridEl.innerHTML = slice.map((a, i) => categoryCardHtml({ ...a, type: a.type || 'TV' }, i)).join('');
+    wireCategoryCards(gridEl, slice, (item) => openSearchResult(item));
   } catch {
     gridEl.innerHTML = '';
   }
@@ -680,6 +829,7 @@ function setHomeCategory(cat) {
   state.homeCategory = cat || 'home';
   if (state.view !== 'home') showView('home');
 
+  setNavDownloadsActive(false);
   document.querySelectorAll('.nav-cat').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.cat === cat);
   });
@@ -694,6 +844,7 @@ function setHomeCategory(cat) {
   els.homeAiringSection?.classList.toggle('hidden', !isHome);
   els.continueSection?.classList.toggle('hidden', !isHome || !UserStore.getContinueWatching().length);
   els.categorySection?.classList.toggle('hidden', isHome);
+  els.downloadsSection?.classList.add('hidden');
   els.azGrid?.querySelectorAll('.az-btn').forEach((b) => b.classList.remove('active'));
 
   syncMobileBrowseBar();
@@ -804,14 +955,20 @@ function renderTrending() {
 
   els.trendingRow.innerHTML = items.map((a, i) => `
     <article class="trending-card" data-mal="${a.malId}" data-idx="${i}">
+      ${cardDownloadBtn(`Download ${a.title}`)}
       <span class="trending-vtitle">${esc(a.title)}</span>
       ${imgTag(a.poster, a.title)}
     </article>`).join('');
 
   els.trendingRow.querySelectorAll('.trending-card').forEach((card) => {
-    card.addEventListener('click', () => {
-      const idx = parseInt(card.dataset.idx, 10);
+    const idx = parseInt(card.dataset.idx, 10);
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.card-dl-btn')) return;
       openSearchResult(state.trendingItems[idx]);
+    });
+    card.querySelector('.card-dl-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      queueCardDownload(state.trendingItems[idx]);
     });
     card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
   });
@@ -830,24 +987,8 @@ function renderCategoryGrid() {
     return;
   }
 
-  els.categoryGrid.innerHTML = items.map((a, i) => `
-    <article class="category-card" data-mal="${a.malId}" data-idx="${i}">
-      <div class="category-poster">
-        ${imgTag(a.poster, a.title)}
-      </div>
-      <div class="category-info">
-        <h3>${esc(a.title)}</h3>
-        <p>${[a.type || a.raw?.type || 'Anime', a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ')}</p>
-      </div>
-    </article>`).join('');
-
-  els.categoryGrid.querySelectorAll('.category-card').forEach((card) => {
-    card.addEventListener('click', () => {
-      const idx = parseInt(card.dataset.idx, 10);
-      openSearchResult(state.categoryItems[idx]);
-    });
-    card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
-  });
+  els.categoryGrid.innerHTML = items.map((a, i) => categoryCardHtml(a, i)).join('');
+  wireCategoryCards(els.categoryGrid, items, (item) => openSearchResult(item));
 }
 
 function stepSpotlight(dir) {
@@ -955,6 +1096,7 @@ function showSearchResultsView(query) {
     return;
   }
   if (state.view !== 'home') showView('home');
+  setNavDownloadsActive(false);
   document.querySelectorAll('.nav-cat').forEach((b) => b.classList.remove('active'));
 
   els.heroSection?.classList.add('hidden');
@@ -963,6 +1105,7 @@ function showSearchResultsView(query) {
   els.homeAiringSection?.classList.add('hidden');
   els.continueSection?.classList.add('hidden');
   els.categorySection?.classList.add('hidden');
+  els.downloadsSection?.classList.add('hidden');
   els.mobileBrowseBar?.classList.add('hidden');
 
   els.searchResultsSection?.classList.remove('hidden');
@@ -995,19 +1138,9 @@ function renderSearchResultsGrid() {
     return;
   }
 
-  els.searchResultsGrid.innerHTML = items.map((a, i) => `
-    <article class="category-card search-result-card" data-idx="${i}" data-mal="${a.malId}">
-      <div class="category-poster">${imgTag(a.poster, a.title)}</div>
-      <div class="category-info">
-        <h3>${esc(a.title)}</h3>
-        <p>${[a.type || 'Anime', a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ')}</p>
-      </div>
-    </article>`).join('');
-
-  els.searchResultsGrid.querySelectorAll('.search-result-card').forEach((card) => {
-    const idx = parseInt(card.dataset.idx, 10);
-    card.addEventListener('click', () => openSearchResult(items[idx], { autoPlay: true, scrollToPlayer: true }));
-    card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
+  els.searchResultsGrid.innerHTML = items.map((a, i) => categoryCardHtml(a, i, 'search-result-card')).join('');
+  wireCategoryCards(els.searchResultsGrid, items, (item) => {
+    openSearchResult(item, { autoPlay: true, scrollToPlayer: true });
   });
 }
 
@@ -1190,6 +1323,7 @@ function renderSeries() {
   renderEpisodeGrid();
   renderServerButtons();
   updateLangButtons();
+  updateDownloadControls();
   loadFranchise(a.malId);
   updateBookmarkButton();
 }
@@ -1386,6 +1520,20 @@ function getVisibleEpisodes() {
   });
 }
 
+function updateDownloadControls() {
+  const count = state.episodes.length;
+  const isMovie = count <= 1;
+  if (els.downloadEpBtn) {
+    els.downloadEpBtn.innerHTML = isMovie
+      ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download`
+      : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download ep`;
+  }
+  if (els.downloadAllBtn) {
+    els.downloadAllBtn.classList.toggle('hidden', isMovie);
+    els.downloadAllBtn.textContent = count > 1 ? `Download all ${count} episodes` : 'Download all episodes';
+  }
+}
+
 function renderEpisodeGrid() {
   const visible = getVisibleEpisodes();
   if (!visible.length) {
@@ -1403,15 +1551,33 @@ function renderEpisodeGrid() {
     const active = num === Number(state.currentEpisode) ? ' active' : '';
     const title = ep.title && ep.title !== `Episode ${num}` ? ep.title : getEpTitle(num);
     return `
-      <button class="ep-row episode-btn${active}" data-ep="${num}" type="button">
+      <div class="ep-row episode-btn${active}" data-ep="${num}" role="button" tabindex="0">
         <span class="ep-num">${num}</span>
         <span class="ep-name">${esc(title)}</span>
+        <button class="ep-download" type="button" data-dl-ep="${num}" aria-label="Download episode ${num}" title="Download">⬇</button>
         <span class="ep-play">▶</span>
-      </button>`;
+      </div>`;
   }).join('');
 
-  els.episodeGrid.querySelectorAll('.episode-btn').forEach((btn) => {
-    btn.addEventListener('click', () => playEpisode(parseInt(btn.dataset.ep, 10), true));
+  els.episodeGrid.querySelectorAll('.episode-btn').forEach((row) => {
+    const play = () => playEpisode(parseInt(row.dataset.ep, 10), true);
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.ep-download')) return;
+      play();
+    });
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        play();
+      }
+    });
+  });
+
+  els.episodeGrid.querySelectorAll('.ep-download').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      queueEpisodeDownload(parseInt(btn.dataset.dlEp, 10));
+    });
   });
 
   const activeBtn = els.episodeGrid.querySelector('.episode-btn.active');

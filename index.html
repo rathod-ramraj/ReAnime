@@ -68,6 +68,10 @@
                 <button class="header-link nav-cat" data-cat="tv" type="button">TV Series</button>
                 <button class="header-link nav-cat" data-cat="popular" type="button">Most Popular</button>
                 <button class="header-link nav-cat" data-cat="airing" type="button">Top Airing</button>
+                <button class="header-link nav-dl" id="navDownloads" type="button" aria-label="Downloads">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Downloads<span class="download-badge hidden" data-download-badge></span>
+                </button>
             </nav>
 
             <div class="search-wrap" id="headerSearch">
@@ -95,6 +99,7 @@
                                 <p class="profile-email">Browse &amp; watch free</p>
                             </div>
                         </div>
+                        <button type="button" class="profile-item" data-profile="downloads" role="menuitem">Downloads <span class="download-badge hidden" data-download-badge></span></button>
                         <button type="button" class="profile-item" data-profile="library" role="menuitem">My Library</button>
                         <button type="button" class="profile-item" data-profile="continue" role="menuitem">Continue Watching</button>
                         <button type="button" class="profile-item" data-profile="bookmarks" role="menuitem">Bookmarks</button>
@@ -202,6 +207,20 @@
                     <h2 class="section-title" id="categoryTitle">Browse</h2>
                     <div class="category-grid" id="categoryGrid"></div>
                 </div>
+
+                <div id="downloadsSection" class="home-section container-max reveal-up hidden">
+                    <div class="downloads-head">
+                        <h2 class="section-title">Downloads</h2>
+                        <button type="button" class="tool-btn sm" id="clearDownloadsBtn">Clear completed</button>
+                    </div>
+                    <p class="downloads-hint">Episodes are saved to your device. Large files may take several minutes.</p>
+                    <div id="downloadEmpty" class="empty-state">
+                        <span class="empty-state-icon">⬇</span>
+                        <h4>No downloads yet</h4>
+                        <p>Open any anime and tap Download on an episode to start.</p>
+                    </div>
+                    <div id="downloadList" class="download-list"></div>
+                </div>
             </section>
 
             <section id="seriesView" class="view hidden" aria-label="Anime watch and details">
@@ -235,6 +254,10 @@
                                 <label class="tool-check"><input type="checkbox" id="autoNext" checked> Auto Next</label>
                             </div>
                             <div class="toolbar-right">
+                                <button class="tool-btn" id="downloadEpBtn" type="button" title="Download episode">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Download
+                                </button>
                                 <button class="tool-btn" id="subBtn">SUB</button>
                                 <button class="tool-btn" id="dubBtn">DUB</button>
                             </div>
@@ -267,6 +290,10 @@
                             <input type="number" id="epFind" class="ep-find" placeholder="Find number" min="1" />
                         </div>
                         <div id="episodeGrid" class="episode-list"></div>
+                        <div class="episodes-download-bar">
+                            <button type="button" class="tool-btn" id="downloadAllBtn">Download all episodes</button>
+                            <button type="button" class="tool-btn" id="openDownloadsBtn">View downloads</button>
+                        </div>
                     </div>
 
                     <!-- Series detail (anikoto info page style) -->
@@ -341,6 +368,11 @@
         <button type="button" class="mob-nav-item" data-mob="browse">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             <span>Browse</span>
+        </button>
+        <button type="button" class="mob-nav-item" data-mob="downloads">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Downloads</span>
+            <span class="download-badge mob-dl-badge hidden" data-download-badge></span>
         </button>
         <button type="button" class="mob-nav-item" data-mob="library">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
@@ -471,6 +503,7 @@
     <script src="js/seo.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/cache.js"></script>
+    <script src="js/download.js"></script>
     <script src="js/design.js"></script>
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>

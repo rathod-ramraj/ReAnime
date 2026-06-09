@@ -3,6 +3,11 @@ const path = require('path');
 const { ApiCache, TTL } = require('./server/cache');
 const { createResolver } = require('./server/resolve');
 const { botGuardMiddleware } = require('./server/bot-guard');
+const {
+  resolveDownloadSources,
+  streamHlsToResponse,
+  proxyFileDownload,
+} = require('./server/download');
 
 const ROOT = __dirname;
 
@@ -135,6 +140,52 @@ function createApp() {
 
   app.get('/api/cache/stats', (_req, res) => {
     res.json({ entries: cache.store.size, malIndex: cache.malIndex.size });
+  });
+
+  app.get('/api/download/resolve', async (req, res) => {
+    try {
+      const params = {
+        method: req.query.method || 'embed',
+        embedId: req.query.embedId || null,
+        malId: req.query.malId ? parseInt(req.query.malId, 10) : null,
+        aniId: req.query.aniId ? parseInt(req.query.aniId, 10) : null,
+        episode: req.query.episode ? parseInt(req.query.episode, 10) : null,
+        lang: req.query.lang || 'sub',
+        embedUrl: req.query.embedUrl || null,
+      };
+      const cacheKey = `dl:resolve:${JSON.stringify(params)}`;
+      const cached = cache.get(cacheKey);
+      if (cached) return res.json(cached);
+
+      const result = await resolveDownloadSources(params);
+      cache.set(cacheKey, result, 10 * 60 * 1000);
+      res.json(result);
+    } catch (err) {
+      res.status(502).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.get('/api/download/file', async (req, res) => {
+    const rawUrl = (req.query.url || '').trim();
+    const filename = (req.query.filename || 'video.mp4').trim();
+    let parsed;
+    try {
+      parsed = new URL(rawUrl);
+    } catch {
+      return res.status(400).json({ ok: false, error: 'Invalid url' });
+    }
+    if (parsed.protocol !== 'https:') {
+      return res.status(400).json({ ok: false, error: 'HTTPS only' });
+    }
+    try {
+      if (rawUrl.includes('.m3u8')) {
+        await streamHlsToResponse(rawUrl, res, filename);
+      } else {
+        await proxyFileDownload(rawUrl, res, filename);
+      }
+    } catch (err) {
+      if (!res.headersSent) res.status(502).json({ ok: false, error: err.message });
+    }
   });
 
   const IMG_HOST_BLOCK = /^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.)/;

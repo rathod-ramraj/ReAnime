@@ -2310,7 +2310,8 @@ html.perf-streaming .brand-name { animation: none; }
 
   /* Series / player */
   body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-  body.search-sheet-open { overflow: hidden; }
+  body.search-sheet-open,
+  body.install-prompt-open { overflow: hidden; }
   #dt-block { display: none !important; }
 
   .page { padding: 0; }
@@ -2541,6 +2542,119 @@ html.perf-streaming .brand-name { animation: none; }
 
 .toast.toast-info { border-color: var(--accent-glow); }
 .toast.toast-info .toast-icon { color: var(--highlight); }
+
+/* ─── Install app prompt ─────────────────────────────────────────────────── */
+.install-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 9200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 20px 16px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeUp 0.35s var(--ease-smooth) both;
+}
+.install-prompt.hidden { display: none !important; }
+
+.install-prompt-card {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 24px 22px;
+  text-align: center;
+  background: rgba(12, 12, 14, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--r-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.install-prompt-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  color: var(--text-3);
+  font-size: 14px;
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.install-prompt-close:hover {
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.install-prompt-icon {
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+}
+
+.install-prompt-card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.install-prompt-card p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-2);
+  margin-bottom: 20px;
+}
+
+.install-prompt-ios {
+  font-size: 13px !important;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.install-prompt-ios strong { color: var(--text-1); }
+
+.install-prompt-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-install {
+  width: 100%;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: var(--r-sm);
+  background: var(--text-1);
+  color: #050505;
+  transition: transform var(--dur-fast) var(--ease-smooth), box-shadow var(--dur-fast) var(--ease-smooth);
+}
+.btn-install:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.12);
+}
+
+.install-prompt-later {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-3);
+  transition: color var(--dur-fast) var(--ease);
+}
+.install-prompt-later:hover { color: var(--text-2); }
+
+@media (min-width: 769px) {
+  .install-prompt { align-items: center; }
+}
+
+@media (max-width: 900px) {
+  .install-prompt { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+}
 
 /* ─── Series detail loading skeleton ────────────────────────────────────── */
 @keyframes skeletonShimmer {

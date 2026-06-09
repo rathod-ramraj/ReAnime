@@ -5,6 +5,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#050505" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="AnimeXplore" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>AnimeXplore — Watch Anime Online Free in HD</title>
     <meta name="description" content="AnimeXplore lets you search, browse, and watch anime online in HD. Explore trending series, movies, top airing shows, and popular titles — sub and dub." />
     <meta name="keywords" content="watch anime online, anime streaming, anime HD, sub anime, dub anime, trending anime, anime movies, TV series anime, AnimeXplore" />
@@ -410,6 +414,20 @@
         </div>
     </footer>
 
+    <div id="installPrompt" class="install-prompt hidden" role="dialog" aria-labelledby="installPromptTitle" aria-modal="true">
+        <div class="install-prompt-card">
+            <button type="button" class="install-prompt-close" id="installPromptClose" aria-label="Close">✕</button>
+            <img src="/favicon.png" alt="" class="install-prompt-icon" width="52" height="52" />
+            <h3 id="installPromptTitle">Install AnimeXplore</h3>
+            <p id="installPromptDesc">Install for faster access — use the button below or the <strong>install icon</strong> next to your browser's address bar.</p>
+            <p id="installPromptIos" class="install-prompt-ios hidden">Tap <strong>Share</strong> <span aria-hidden="true">⎋</span> then <strong>Add to Home Screen</strong>.</p>
+            <div class="install-prompt-actions">
+                <button type="button" class="btn-install" id="installPromptBtn">Install App</button>
+                <button type="button" class="install-prompt-later" id="installPromptLater">Not now</button>
+            </div>
+        </div>
+    </div>
+
     <div class="notify-panel hidden" id="notifyPanel" role="dialog" aria-label="Notifications">
         <div class="notify-panel-head">
             <h3>Notifications</h3>
@@ -438,6 +456,13 @@
         <p class="dt-block-hint">Please close Developer Tools to continue watching.</p>
     </div>
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+            });
+        }
+    </script>
     <script src="js/seo.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/cache.js"></script>

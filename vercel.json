@@ -7,6 +7,8 @@
     { "src": "js/**", "use": "@vercel/static" },
     { "src": "Design.json", "use": "@vercel/static" },
     { "src": "favicon.png", "use": "@vercel/static" },
+    { "src": "bg-footer.jpg", "use": "@vercel/static" },
+    { "src": "sw.js", "use": "@vercel/static" },
     { "src": "manifest.json", "use": "@vercel/static" },
     { "src": "robots.txt", "use": "@vercel/static" },
     { "src": "sitemap.xml", "use": "@vercel/static" }

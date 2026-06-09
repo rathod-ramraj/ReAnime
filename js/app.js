@@ -154,6 +154,12 @@ const els = {
   mobileSearchResults: $('#mobileSearchResults'),
   mobileSearchClose: $('#mobileSearchClose'),
   mobileBrowseBar: $('#mobileBrowseBar'),
+  installPrompt: $('#installPrompt'),
+  installPromptClose: $('#installPromptClose'),
+  installPromptBtn: $('#installPromptBtn'),
+  installPromptLater: $('#installPromptLater'),
+  installPromptIos: $('#installPromptIos'),
+  installPromptDesc: $('#installPromptDesc'),
 };
 
 const AZ_LETTERS = ['All', '#', '0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
@@ -164,6 +170,7 @@ async function init() {
   injectToastContainer();
   initRevealObserver();
   initHeaderMenus();
+  initInstallPrompt();
   bindEvents();
   renderAzGrid();
   renderContinueWatching();
@@ -1728,6 +1735,111 @@ function setPlayerPlaceholder(text) {
     el.appendChild(textNode);
   }
   textNode.textContent = '\n' + text;
+}
+
+// ─── PWA install prompt ───────────────────────────────────────────────────
+let deferredInstallPrompt = null;
+let installPopupTimer = null;
+const INSTALL_DISMISS_KEY = 'animexplore:installDismissed';
+const INSTALL_DISMISS_DAYS = 14;
+
+function isAppInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent || '')
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isInstallDismissed() {
+  try {
+    const ts = parseInt(localStorage.getItem(INSTALL_DISMISS_KEY), 10);
+    if (!ts) return false;
+    return Date.now() - ts < INSTALL_DISMISS_DAYS * 86400000;
+  } catch {
+    return false;
+  }
+}
+
+function dismissInstallPrompt() {
+  els.installPrompt?.classList.add('hidden');
+  document.body.classList.remove('install-prompt-open');
+  try { localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now())); } catch { /* ignore */ }
+}
+
+function showInstallPopup(mode = 'native') {
+  if (!els.installPrompt || isAppInstalled() || isInstallDismissed()) return;
+
+  const isIos = mode === 'ios' || (mode === 'auto' && isIosDevice());
+  const hasNative = mode === 'native' && deferredInstallPrompt;
+
+  if (mode === 'auto' && !isIos && !deferredInstallPrompt) return;
+
+  els.installPromptIos?.classList.toggle('hidden', !isIos);
+  if (els.installPromptDesc) {
+    els.installPromptDesc.classList.toggle('hidden', isIos);
+  }
+  if (els.installPromptBtn) {
+    if (isIos) {
+      els.installPromptBtn.textContent = 'Got it';
+    } else {
+      els.installPromptBtn.textContent = 'Install App';
+    }
+  }
+
+  els.installPrompt.classList.remove('hidden');
+  document.body.classList.add('install-prompt-open');
+}
+
+function scheduleInstallPopup(mode = 'auto', delayMs = 3500) {
+  if (installPopupTimer) clearTimeout(installPopupTimer);
+  installPopupTimer = setTimeout(() => showInstallPopup(mode), delayMs);
+}
+
+async function onInstallClick() {
+  if (isIosDevice() || !deferredInstallPrompt) {
+    dismissInstallPrompt();
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  try {
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') dismissInstallPrompt();
+  } catch { /* ignore */ }
+  deferredInstallPrompt = null;
+}
+
+function initInstallPrompt() {
+  if (isAppInstalled() || isInstallDismissed()) return;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    document.documentElement.classList.add('pwa-installable');
+    scheduleInstallPopup('native', 2500);
+  });
+
+  window.addEventListener('appinstalled', dismissInstallPrompt);
+
+  els.installPromptClose?.addEventListener('click', dismissInstallPrompt);
+  els.installPromptLater?.addEventListener('click', dismissInstallPrompt);
+  els.installPromptBtn?.addEventListener('click', onInstallClick);
+
+  els.installPrompt?.addEventListener('click', (e) => {
+    if (e.target === els.installPrompt) dismissInstallPrompt();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.installPrompt?.classList.contains('hidden')) {
+      dismissInstallPrompt();
+    }
+  });
+
+  if (isMobileView() && isIosDevice()) {
+    scheduleInstallPopup('ios', 4000);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

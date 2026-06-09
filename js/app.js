@@ -39,6 +39,7 @@ function isMobileView() {
 
 function syncDeviceMode() {
   document.documentElement.classList.toggle('mobile-mode', isMobileView());
+  syncMobileBrowseBar();
 }
 
 function posterSrc(url) {
@@ -58,7 +59,7 @@ window.__imgFallback = function (img) {
     img.src = fb;
     return;
   }
-  if (img.classList.contains('hero-bg-img')) {
+  if (img.classList.contains('hero-bg-img') || img.classList.contains('hero-visual-img')) {
     img.style.opacity = '0';
     return;
   }
@@ -84,6 +85,7 @@ const els = {
   heroSection: $('#heroSection'),
   heroBg: $('#heroBg'),
   heroBgImg: $('#heroBgImg'),
+  heroVisualImg: $('#heroVisualImg'),
   heroRank: $('#heroRank'),
   heroTitle: $('#heroTitle'),
   heroMeta: $('#heroMeta'),
@@ -136,6 +138,22 @@ const els = {
   bookmarkBtn: $('#bookmarkBtn'),
   azGrid: $('#azGrid'),
   mobileNav: $('#mobileNav'),
+  homePopularSection: $('#homePopularSection'),
+  homePopularGrid: $('#homePopularGrid'),
+  homeAiringSection: $('#homeAiringSection'),
+  homeAiringGrid: $('#homeAiringGrid'),
+  notifyBtn: $('#notifyBtn'),
+  notifyPanel: $('#notifyPanel'),
+  notifyClose: $('#notifyClose'),
+  notifyDot: $('#notifyDot'),
+  profileBtn: $('#profileBtn'),
+  profileDropdown: $('#profileDropdown'),
+  profileMenu: $('#profileMenu'),
+  mobileSearchSheet: $('#mobileSearchSheet'),
+  mobileSearchInput: $('#mobileSearchInput'),
+  mobileSearchResults: $('#mobileSearchResults'),
+  mobileSearchClose: $('#mobileSearchClose'),
+  mobileBrowseBar: $('#mobileBrowseBar'),
 };
 
 const AZ_LETTERS = ['All', '#', '0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
@@ -143,6 +161,9 @@ const AZ_LETTERS = ['All', '#', '0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 async function init() {
   syncDeviceMode();
   window.addEventListener('resize', debounce(syncDeviceMode, 150));
+  injectToastContainer();
+  initRevealObserver();
+  initHeaderMenus();
   bindEvents();
   renderAzGrid();
   renderContinueWatching();
@@ -152,6 +173,7 @@ async function init() {
   checkServer();
   loadHomeData();
   loadRecent();
+  syncMobileBrowseBar();
 }
 
 async function checkServer() {
@@ -230,10 +252,39 @@ function bindEvents() {
   els.bookmarkBtn?.addEventListener('click', toggleBookmarkCurrent);
   $('#footerBrand')?.addEventListener('click', (e) => { e.preventDefault(); goHome(e); });
 
-  document.querySelectorAll('[data-footer]').forEach((a) => {
+  document.querySelectorAll('[data-footer], [data-social]').forEach((a) => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
-      alert('This section will be available soon. Contact us via the site for requests.');
+      showToast('This section will be available soon.', 'info');
+    });
+  });
+
+  document.querySelectorAll('[data-footer-nav]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.footerNav;
+      if (cat === 'home' || cat === 'movies' || cat === 'tv' || cat === 'popular') {
+        setHomeCategory(cat === 'home' ? 'home' : cat);
+        showView('home');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      showToast('Community features coming soon.', 'info');
+    });
+  });
+
+  els.profileDropdown?.querySelectorAll('[data-profile]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      closeHeaderMenus();
+      const action = btn.dataset.profile;
+      if (action === 'library') { onMobileNav('library'); return; }
+      if (action === 'continue') {
+        showView('home');
+        setHomeCategory('home');
+        els.continueSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      if (action === 'bookmarks') { onMobileNav('library'); return; }
+      showToast('This feature will be available soon.', 'info');
     });
   });
 
@@ -241,7 +292,76 @@ function bindEvents() {
     btn.addEventListener('click', () => onMobileNav(btn.dataset.mob));
   });
 
+  els.mobileSearchInput?.addEventListener('input', debounce((e) => {
+    els.searchInput.value = e.target.value;
+    onSearchInput({ target: els.searchInput });
+  }, 120));
+
+  els.mobileSearchInput?.addEventListener('keydown', (e) => {
+    els.searchInput.value = els.mobileSearchInput.value;
+    onSearchKeydown(e);
+  });
+
+  els.mobileSearchClose?.addEventListener('click', closeMobileSearch);
+
   els.mobileInfoToggle?.addEventListener('click', toggleMobileDetail);
+}
+
+function openMobileSearch() {
+  if (!isMobileView()) {
+    els.searchInput?.focus();
+    return;
+  }
+  closeHeaderMenus();
+  els.mobileSearchSheet?.classList.remove('hidden');
+  document.body.classList.add('search-sheet-open');
+  els.mobileSearchInput.value = els.searchInput?.value || '';
+  requestAnimationFrame(() => els.mobileSearchInput?.focus());
+  if (state.searchResults.length) renderMobileSearchResults();
+}
+
+function closeMobileSearch() {
+  els.mobileSearchSheet?.classList.add('hidden');
+  document.body.classList.remove('search-sheet-open');
+  els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mob === 'home' && state.view === 'home' && state.homeCategory === 'home');
+  });
+}
+
+function renderMobileSearchResults() {
+  if (!els.mobileSearchResults) return;
+  if (!state.searchResults.length) {
+    els.mobileSearchResults.innerHTML = state.searchQuery.length >= 2
+      ? '<p class="mobile-search-empty">No results found</p>'
+      : '<p class="mobile-search-empty">Type to search anime…</p>';
+    return;
+  }
+  els.mobileSearchResults.innerHTML = state.searchResults.map((anime, i) => `
+    <button type="button" class="search-item mobile-search-item${i === state.searchIndex ? ' active' : ''}" data-idx="${i}" data-mal="${anime.malId}">
+      ${imgTag(anime.poster, '')}
+      <div>
+        <div class="search-item-title">${esc(anime.title)}</div>
+        <div class="search-item-meta">${anime.year || ''} · ${anime.episodes || '?'} eps</div>
+      </div>
+    </button>`).join('');
+
+  els.mobileSearchResults.querySelectorAll('.mobile-search-item').forEach((el) => {
+    const idx = parseInt(el.dataset.idx, 10);
+    el.addEventListener('click', () => {
+      closeMobileSearch();
+      openSearchResult(state.searchResults[idx]);
+    });
+  });
+}
+
+function syncMobileBrowseBar() {
+  const bar = els.mobileBrowseBar;
+  if (!bar) return;
+  const show = isMobileView() && state.view === 'home' && state.homeCategory !== 'library';
+  bar.classList.toggle('hidden', !show);
+  bar.querySelectorAll('.mob-chip').forEach((chip) => {
+    chip.classList.toggle('active', chip.dataset.cat === state.homeCategory);
+  });
 }
 
 function toggleMobileDetail() {
@@ -258,12 +378,13 @@ function setMobileDetailCollapsed(collapsed) {
 }
 
 function onMobileNav(tab) {
+  closeMobileSearch();
   els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((b) => {
     b.classList.toggle('active', b.dataset.mob === tab);
   });
   if (tab === 'home') { setHomeCategory('home'); showView('home'); return; }
-  if (tab === 'search') { showView('home'); els.searchInput?.focus(); return; }
-  if (tab === 'browse') { setHomeCategory('popular'); return; }
+  if (tab === 'search') { showView('home'); openMobileSearch(); return; }
+  if (tab === 'browse') { showView('home'); setHomeCategory('popular'); return; }
   if (tab === 'library') { showLibrary(); }
 }
 
@@ -273,9 +394,14 @@ function showLibrary() {
   document.querySelectorAll('.nav-cat').forEach((b) => b.classList.remove('active'));
   els.heroSection?.classList.add('hidden');
   els.homeTrendingSection?.classList.add('hidden');
+  els.homePopularSection?.classList.add('hidden');
+  els.homeAiringSection?.classList.add('hidden');
   els.continueSection?.classList.add('hidden');
   els.categorySection?.classList.remove('hidden');
+  revealSection(els.categorySection);
   if (els.categoryTitle) els.categoryTitle.textContent = 'My Library';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  syncMobileBrowseBar();
   renderLibraryGrid();
 }
 
@@ -284,7 +410,12 @@ function renderLibraryGrid() {
   const history = UserStore.getHistory();
   const merged = [...bookmarks, ...history.filter((h) => !bookmarks.some((b) => b.id === h.id))];
   if (!merged.length) {
-    els.categoryGrid.innerHTML = '<div class="empty-state">No bookmarks or watch history yet.</div>';
+    els.categoryGrid.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-state-icon">★</span>
+        <h4>Your library is empty</h4>
+        <p>Bookmark anime or start watching to build your personal list.</p>
+      </div>`;
     return;
   }
   els.categoryGrid.innerHTML = merged.map((item, i) => `
@@ -325,9 +456,13 @@ async function filterByLetter(letter) {
   showView('home');
   els.heroSection?.classList.add('hidden');
   els.homeTrendingSection?.classList.add('hidden');
+  els.homePopularSection?.classList.add('hidden');
+  els.homeAiringSection?.classList.add('hidden');
   els.continueSection?.classList.add('hidden');
   els.categorySection?.classList.remove('hidden');
+  revealSection(els.categorySection);
   if (els.categoryTitle) els.categoryTitle.textContent = letter === 'all' ? 'All Anime' : `Anime: ${letter}`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   els.categoryGrid.innerHTML = Array(8).fill('<div class="skeleton-card"></div>').join('');
 
   try {
@@ -357,6 +492,7 @@ function renderContinueWatching() {
     return;
   }
   els.continueSection?.classList.remove('hidden');
+  window.__observeReveal?.(els.continueSection);
   els.continueRow.innerHTML = items.map((item, i) => {
     const pct = item.totalEps ? Math.min(100, (item.episode / item.totalEps) * 100) : 30;
     return `
@@ -391,6 +527,18 @@ function toggleBookmarkCurrent() {
   if (!state.currentAnime) return;
   const on = UserStore.toggleBookmark(state.currentAnime);
   updateBookmarkButton(on);
+
+  // Tactile pop animation + toast feedback
+  els.bookmarkBtn?.classList.remove('just-toggled');
+  requestAnimationFrame(() => els.bookmarkBtn?.classList.add('just-toggled'));
+  els.bookmarkBtn?.addEventListener('animationend', () => {
+    els.bookmarkBtn.classList.remove('just-toggled');
+  }, { once: true });
+
+  showToast(
+    on ? '★ Bookmarked' : '☆ Removed from bookmarks',
+    on ? 'success' : 'info'
+  );
 }
 
 function updateBookmarkButton(forced) {
@@ -471,6 +619,36 @@ async function loadHomeData() {
       setTimeout(() => loadHomeData(), 2000);
     }
   }
+
+  // Load popular + airing grids in parallel, non-blocking
+  loadHomeGrid('popular', els.homePopularGrid);
+  loadHomeGrid('airing', els.homeAiringGrid);
+}
+
+async function loadHomeGrid(type, gridEl) {
+  if (!gridEl) return;
+  try {
+    const { items } = await API.getBrowse(type, 1);
+    const slice = (items || []).slice(0, 12);
+    if (!slice.length) { gridEl.innerHTML = ''; return; }
+    gridEl.innerHTML = slice.map((a, i) => `
+      <article class="category-card" data-mal="${a.malId}" data-idx="${i}">
+        <div class="category-poster">${imgTag(a.poster, a.title)}</div>
+        <div class="category-info">
+          <h3>${esc(a.title)}</h3>
+          <p>${[a.type || 'TV', a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ')}</p>
+        </div>
+      </article>`).join('');
+    gridEl.querySelectorAll('.category-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const idx = parseInt(card.dataset.idx, 10);
+        openSearchResult(slice[idx]);
+      });
+      card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
+    });
+  } catch {
+    gridEl.innerHTML = '';
+  }
 }
 
 async function loadCategoryItems(type) {
@@ -495,9 +673,13 @@ function setHomeCategory(cat) {
   const isHome = cat === 'home';
   els.heroSection?.classList.toggle('hidden', !isHome);
   els.homeTrendingSection?.classList.toggle('hidden', !isHome);
+  els.homePopularSection?.classList.toggle('hidden', !isHome);
+  els.homeAiringSection?.classList.toggle('hidden', !isHome);
   els.continueSection?.classList.toggle('hidden', !isHome || !UserStore.getContinueWatching().length);
   els.categorySection?.classList.toggle('hidden', isHome);
   els.azGrid?.querySelectorAll('.az-btn').forEach((b) => b.classList.remove('active'));
+
+  syncMobileBrowseBar();
 
   if (isHome) {
     stopSpotlightAutoplay();
@@ -506,8 +688,22 @@ function setHomeCategory(cat) {
   }
 
   stopSpotlightAutoplay();
+  revealSection(els.categorySection);
   if (els.categoryTitle) els.categoryTitle.textContent = CATEGORY_LABELS[cat] || 'Browse';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   loadCategoryItems(cat);
+}
+
+function setHeroImage(imgEl, poster, title) {
+  if (!imgEl) return;
+  const src = posterSrc(poster);
+  imgEl.dataset.fallback = poster || '';
+  imgEl.dataset.triedFb = '';
+  imgEl.referrerPolicy = 'no-referrer';
+  imgEl.onerror = function () { window.__imgFallback(this); };
+  imgEl.src = src || '';
+  imgEl.alt = title || '';
+  imgEl.style.opacity = src ? '1' : '0';
 }
 
 function renderSpotlight() {
@@ -518,17 +714,16 @@ function renderSpotlight() {
   state.spotlightIndex = idx;
   const a = items[idx];
 
-  const bg = posterSrc(a.poster);
-  if (els.heroBgImg) {
-    els.heroBgImg.dataset.fallback = a.poster || '';
-    els.heroBgImg.dataset.triedFb = '';
-    els.heroBgImg.referrerPolicy = 'no-referrer';
-    els.heroBgImg.onerror = function () { window.__imgFallback(this); };
-    els.heroBgImg.src = bg || '';
-    els.heroBgImg.alt = a.title || '';
-    els.heroBgImg.style.opacity = bg ? '1' : '0';
-  }
+  setHeroImage(els.heroBgImg, a.poster, '');
+  setHeroImage(els.heroVisualImg, a.poster, a.title);
   if (els.heroBg) els.heroBg.style.backgroundImage = 'none';
+
+  // Re-trigger visual entrance on slide change
+  const frame = document.querySelector('.hero-visual-frame');
+  if (frame) {
+    frame.style.animation = 'none';
+    requestAnimationFrame(() => { frame.style.animation = ''; });
+  }
   if (els.heroRank) els.heroRank.textContent = `#${idx + 1} Spotlight`;
   if (els.heroTitle) els.heroTitle.textContent = a.title || '—';
   if (els.heroDesc) {
@@ -544,6 +739,41 @@ function renderSpotlight() {
       '<span class="hero-badge hd">HD</span>',
       a.score ? `<span class="hero-badge score">★ ${esc(String(a.score))}</span>` : '',
     ].filter(Boolean).join('');
+  }
+
+  renderHeroDots(items.length, idx);
+}
+
+function renderHeroDots(total, activeIdx) {
+  const container = document.getElementById('heroDots');
+  if (!container || total <= 1) {
+    if (container) container.innerHTML = '';
+    return;
+  }
+
+  // Only rebuild DOM when count changes; otherwise just swap the active class
+  if (container.children.length !== total) {
+    container.innerHTML = Array.from({ length: total }, (_, i) => `
+      <button class="hero-dot${i === activeIdx ? ' active' : ''}"
+              type="button"
+              data-idx="${i}"
+              aria-label="Slide ${i + 1}"
+              role="tab"
+              aria-selected="${i === activeIdx}">
+      </button>`).join('');
+
+    container.querySelectorAll('.hero-dot').forEach((dot) => {
+      dot.addEventListener('click', () => {
+        state.spotlightIndex = parseInt(dot.dataset.idx, 10);
+        renderSpotlight();
+        resetSpotlightAutoplay();
+      });
+    });
+  } else {
+    container.querySelectorAll('.hero-dot').forEach((dot, i) => {
+      dot.classList.toggle('active', i === activeIdx);
+      dot.setAttribute('aria-selected', String(i === activeIdx));
+    });
   }
 }
 
@@ -574,7 +804,12 @@ function renderCategoryGrid() {
   if (!els.categoryGrid) return;
   const items = state.categoryItems;
   if (!items.length) {
-    els.categoryGrid.innerHTML = '<div class="empty-state">No results</div>';
+    els.categoryGrid.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-state-icon">🎌</span>
+        <h4>No results found</h4>
+        <p>Try a different category or browse via the search bar.</p>
+      </div>`;
     return;
   }
 
@@ -667,8 +902,13 @@ async function onSearchInput(e) {
 }
 
 function renderSearchDropdown() {
+  if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) {
+    renderMobileSearchResults();
+  }
+
   if (!state.searchOpen || !state.searchResults.length) {
     els.searchDropdown.classList.add('hidden');
+    if (isMobileView()) renderMobileSearchResults();
     return;
   }
   els.searchDropdown.classList.remove('hidden');
@@ -686,7 +926,12 @@ function renderSearchDropdown() {
     el.addEventListener('click', () => openSearchResult(state.searchResults[idx]));
     el.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(el.dataset.mal, 10)));
   });
-  state.searchResults.slice(0, 3).forEach((a) => API.prefetchResolve(a.malId));
+
+  // Prefetch top results only once per query, not on every render (arrow-key navigation)
+  if (!state._lastPrefetchQuery || state._lastPrefetchQuery !== state.searchQuery) {
+    state._lastPrefetchQuery = state.searchQuery;
+    state.searchResults.slice(0, 3).forEach((a) => API.prefetchResolve(a.malId));
+  }
 }
 
 function onSearchKeydown(e) {
@@ -725,7 +970,11 @@ function applyResolvedData(result, opts = {}) {
   renderSeries();
   setMobileDetailCollapsed(isMobileView());
   updatePageTitle(anime.title, null);
-  if (opts.autoPlay === false) return;
+  if (opts.autoPlay === false) {
+    requestAnimationFrame(() => scrollToPlayer('instant'));
+    setTimeout(() => scrollToPlayer('instant'), 100);
+    return;
+  }
   const firstEp = getFirstEpisodeNumber();
   const delay = isMobileView() ? 550 : 450;
   setTimeout(() => playEpisode(firstEp, opts.scrollToPlayer !== false), delay);
@@ -733,7 +982,9 @@ function applyResolvedData(result, opts = {}) {
 
 async function openSearchResult(anime, opts = {}) {
   state.searchOpen = false;
-  els.searchInput.value = anime.title || '';
+  els.searchInput.value = '';
+  if (els.mobileSearchInput) els.mobileSearchInput.value = '';
+  closeMobileSearch();
   renderSearchDropdown();
   showView('series');
   els.seriesError.classList.add('hidden');
@@ -752,7 +1003,7 @@ async function openSearchResult(anime, opts = {}) {
     setLoading(false);
   } catch (e) {
     setLoading(false);
-    showSeriesError(`Could not load: ${e.message}`);
+    showSeriesError(`Could not load: ${e.message}`, () => openSearchResult(anime, opts));
   }
 }
 
@@ -776,7 +1027,7 @@ async function openAnikotoSeries(seriesId) {
     setLoading(false);
   } catch (e) {
     setLoading(false);
-    showSeriesError(`Failed: ${e.message}`);
+    showSeriesError(`Failed: ${e.message}`, () => openAnikotoSeries(seriesId));
   }
 }
 
@@ -952,13 +1203,18 @@ function renderFranchise(items, currentMalId) {
 
   els.franchiseTrack.innerHTML = items.map((item, idx) => {
     const active = item.malId === currentMalId ? ' active' : '';
-    const safePoster = (item.poster || '').replace(/'/g, '%27');
-    const bg = safePoster ? ` style="background-image:url('${safePoster}')"` : '';
+    // Use data-poster attribute and set via JS to avoid inline-style URL injection (XSS)
     return `
-      <button class="franchise-card${active}" type="button" data-mal="${item.malId}" data-title="${esc(item.title)}" data-idx="${idx}"${bg}>
+      <button class="franchise-card${active}" type="button" data-mal="${item.malId}" data-title="${esc(item.title)}" data-poster="${esc(item.poster || '')}" data-idx="${idx}">
         <span class="franchise-label">${esc(item.label)}</span>
       </button>`;
   }).join('');
+
+  // Apply background images safely via JS (avoids CSS injection through malformed URLs)
+  els.franchiseTrack.querySelectorAll('.franchise-card[data-poster]').forEach((card) => {
+    const poster = card.dataset.poster;
+    if (poster) card.style.backgroundImage = `url(${JSON.stringify(poster)})`; // JSON.stringify escapes quotes
+  });
 
   els.franchiseDots.innerHTML = items.map((_, idx) =>
     `<span class="franchise-dot${idx === activeIdx ? ' active' : ''}" data-idx="${idx}"></span>`
@@ -1010,7 +1266,12 @@ function getVisibleEpisodes() {
 function renderEpisodeGrid() {
   const visible = getVisibleEpisodes();
   if (!visible.length) {
-    els.episodeGrid.innerHTML = '<div class="empty-state">No episodes</div>';
+    els.episodeGrid.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-state-icon">📺</span>
+        <h4>No episodes</h4>
+        <p>Episode data isn't available for this title yet.</p>
+      </div>`;
     return;
   }
 
@@ -1029,6 +1290,17 @@ function renderEpisodeGrid() {
   els.episodeGrid.querySelectorAll('.episode-btn').forEach((btn) => {
     btn.addEventListener('click', () => playEpisode(parseInt(btn.dataset.ep, 10), true));
   });
+
+  const activeBtn = els.episodeGrid.querySelector('.episode-btn.active');
+  if (activeBtn) {
+    setTimeout(() => {
+      activeBtn.scrollIntoView({
+        block: 'nearest',
+        inline: 'center',
+        behavior: 'smooth',
+      });
+    }, 80);
+  }
 }
 
 function getEpTitle(num) {
@@ -1095,12 +1367,14 @@ function resolveStreamUrl(ep, lang, method) {
 
 function findEpisode(epNum) {
   const num = Number(epNum);
-  return state.episodes.find((e) => Number(e.number) === num) || state.episodes[num - 1] || null;
+  // Only use the exact-match path — the [num-1] fallback assumed sorted 1-indexed
+  // episodes which is not guaranteed and returned wrong episodes for multi-season anime.
+  return state.episodes.find((e) => Number(e.number) === num) || null;
 }
 
 function loadPlayer(url) {
   els.playerPlaceholder.classList.remove('hidden');
-  els.playerPlaceholder.textContent = 'Loading…';
+  setPlayerPlaceholder('Loading…');
   els.playerIframe.classList.add('hidden');
   els.playerIframe.src = 'about:blank';
 
@@ -1121,21 +1395,27 @@ function loadPlayer(url) {
   setTimeout(load, 200);
 }
 
-function scrollToPlayer() {
+function getHeaderHeight() {
+  const header = document.querySelector('.site-header');
+  const banner = document.getElementById('proxyBanner');
+  let h = header?.offsetHeight || 72;
+  if (banner && !banner.classList.contains('hidden')) h += banner.offsetHeight;
+  return h;
+}
+
+function scrollToPlayer(behavior = 'smooth') {
   const target = els.playerWrap;
   if (!target) return;
-  const headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h'), 10) || 72;
-  const offset = isMobileView() ? headerH + 4 : headerH + 8;
+  const offset = getHeaderHeight() + 12;
   const top = target.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  window.scrollTo({ top: Math.max(0, top), behavior });
 }
 
 function scrollToDetail() {
   const target = els.detailPanel;
   if (!target) return;
   setMobileDetailCollapsed(false);
-  const headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h'), 10) || 72;
-  const top = target.getBoundingClientRect().top + window.scrollY - headerH - 8;
+  const top = target.getBoundingClientRect().top + window.scrollY - getHeaderHeight() - 12;
   window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
@@ -1172,7 +1452,7 @@ function playEpisode(epNum, scrollToPlayerView = true) {
     els.playerIframe.src = 'about:blank';
     els.playerIframe.classList.add('hidden');
     els.playerPlaceholder.classList.remove('hidden');
-    els.playerPlaceholder.textContent = 'No stream for this episode.';
+    setPlayerPlaceholder('No stream available for this episode. Try a different server.');
   }
 
   updateEpisodeUI(ep);
@@ -1185,7 +1465,8 @@ function playEpisode(epNum, scrollToPlayerView = true) {
 
   if (scrollToPlayerView) {
     scrollToPlayer();
-    if (isMobileView()) setTimeout(scrollToPlayer, 700);
+    setTimeout(() => scrollToPlayer('instant'), 400);
+    if (isMobileView()) setTimeout(() => scrollToPlayer('instant'), 800);
   }
 }
 
@@ -1216,12 +1497,22 @@ function updateNavButtons() {
 function setLoading(on) {
   els.seriesInfo?.classList.toggle('hidden', on);
   $('#seriesLoading')?.classList.toggle('hidden', !on);
+  if (!on && state.view === 'series') {
+    requestAnimationFrame(() => scrollToPlayer('instant'));
+    setTimeout(() => scrollToPlayer('instant'), 150);
+  }
 }
 
-function showSeriesError(msg) {
-  els.seriesError.textContent = msg;
+function showSeriesError(msg, retryFn) {
+  els.seriesError.innerHTML = `
+    <span>${esc(msg)}</span>
+    ${retryFn ? '<button class="btn-retry" id="retryBtn">↺ Retry</button>' : ''}
+  `;
   els.seriesError.classList.remove('hidden');
   els.seriesInfo?.classList.add('hidden');
+  if (retryFn) {
+    document.getElementById('retryBtn')?.addEventListener('click', retryFn, { once: true });
+  }
 }
 
 function showView(view) {
@@ -1253,9 +1544,15 @@ function showView(view) {
     prevEl?.classList.add('hidden');
     prevEl?.classList.remove('view-leaving');
     nextEl?.classList.remove('hidden');
+    if (view === 'series') {
+      requestAnimationFrame(() => scrollToPlayer('instant'));
+      setTimeout(() => scrollToPlayer('instant'), 350);
+    }
   }, 280);
 
   state.view = view;
+  syncMobileBrowseBar();
+  if (view === 'series') closeMobileSearch();
 }
 
 function toggleDescription() {
@@ -1294,6 +1591,143 @@ function stripHtml(html) {
 function debounce(fn, ms) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// ─── Toast notification system ────────────────────────────────────────────
+let _toastContainer = null;
+
+function injectToastContainer() {
+  if (_toastContainer) return;
+  _toastContainer = document.createElement('div');
+  _toastContainer.className = 'toast-container';
+  _toastContainer.setAttribute('aria-live', 'polite');
+  _toastContainer.setAttribute('aria-atomic', 'false');
+  document.body.appendChild(_toastContainer);
+}
+
+const TOAST_ICONS = { success: '✓', error: '✕', info: 'ℹ' };
+
+function showToast(message, type = 'info', duration = 3000) {
+  if (!_toastContainer) injectToastContainer();
+
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.setAttribute('role', 'status');
+  el.innerHTML = `
+    <span class="toast-icon">${TOAST_ICONS[type] || TOAST_ICONS.info}</span>
+    <span>${esc(message)}</span>`;
+
+  _toastContainer.appendChild(el);
+
+  const dismiss = () => {
+    el.classList.add('toast-leaving');
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  };
+
+  const timer = setTimeout(dismiss, duration);
+  el.addEventListener('click', () => { clearTimeout(timer); dismiss(); });
+}
+
+// ─── Player placeholder text update helper ────────────────────────────────
+function initRevealObserver() {
+  const targets = document.querySelectorAll('.reveal-up');
+  if (!targets.length) return;
+
+  const show = (el) => el.classList.add('is-visible');
+
+  if (!('IntersectionObserver' in window)) {
+    targets.forEach(show);
+    return;
+  }
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        show(entry.target);
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  targets.forEach((el) => {
+    if (el.classList.contains('hidden')) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) show(el);
+    else io.observe(el);
+  });
+
+  // Re-observe sections when they become visible
+  window.__observeReveal = (el) => {
+    if (!el || el.classList.contains('is-visible')) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      el.classList.add('is-visible');
+      return;
+    }
+    io.observe(el);
+  };
+}
+
+function revealSection(el) {
+  if (!el) return;
+  el.classList.add('is-visible');
+  window.__observeReveal?.(el);
+}
+
+function initHeaderMenus() {
+  els.notifyBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = !els.notifyPanel?.classList.contains('hidden');
+    closeHeaderMenus();
+    if (!open) {
+      els.notifyPanel?.classList.remove('hidden');
+      els.notifyBtn?.setAttribute('aria-expanded', 'true');
+      els.notifyDot?.classList.remove('has-unread');
+    }
+  });
+
+  els.notifyClose?.addEventListener('click', closeHeaderMenus);
+
+  els.profileBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = els.profileBtn.getAttribute('aria-expanded') === 'true';
+    closeHeaderMenus();
+    if (!open) {
+      els.profileDropdown?.classList.remove('hidden');
+      els.profileBtn.setAttribute('aria-expanded', 'true');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.header-actions') && !e.target.closest('.notify-panel')) {
+      closeHeaderMenus();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeHeaderMenus();
+  });
+
+  els.notifyDot?.classList.add('has-unread');
+}
+
+function closeHeaderMenus() {
+  els.notifyPanel?.classList.add('hidden');
+  els.notifyBtn?.setAttribute('aria-expanded', 'false');
+  els.profileDropdown?.classList.add('hidden');
+  els.profileBtn?.setAttribute('aria-expanded', 'false');
+}
+
+function setPlayerPlaceholder(text) {
+  const el = els.playerPlaceholder;
+  if (!el) return;
+  // Preserve the icon span, update the text node
+  let textNode = [...el.childNodes].find((n) => n.nodeType === Node.TEXT_NODE);
+  if (!textNode) {
+    textNode = document.createTextNode('');
+    el.appendChild(textNode);
+  }
+  textNode.textContent = '\n' + text;
 }
 
 document.addEventListener('DOMContentLoaded', init);

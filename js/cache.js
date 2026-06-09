@@ -71,7 +71,8 @@ const Cache = {
   },
 
   setRecent(page, perPage, data) {
-    this.set(`recent:${page}:${perPage}`, data, this.TTL.recent);
+    // Persist recent page 1 so the sidebar loads instantly on next visit
+    this.set(`recent:${page}:${perPage}`, data, this.TTL.recent, page === 1);
   },
 
   getFranchise(malId) {
@@ -88,5 +89,15 @@ const Cache = {
 
   setHome(data) {
     this.set('home:feed', data, this.TTL.home, true);
+  },
+
+  getBrowse(key) {
+    return this.get(key);
+  },
+
+  setBrowse(key, data) {
+    // Persist popular/airing browse page 1 for fast initial load
+    const isFirstPage = key.endsWith(':1');
+    this.set(key, data, this.TTL.browse, isFirstPage);
   },
 };

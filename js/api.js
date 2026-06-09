@@ -81,7 +81,8 @@ const API = {
   },
 
   async getBrowse(type = 'airing', page = 1) {
-    const cached = Cache.get(`browse:${type}:${page}`);
+    const key = `browse:${type}:${page}`;
+    const cached = Cache.getBrowse(key);
     if (cached) return cached;
 
     const result = await this.fetchJSON(`/api/browse?type=${encodeURIComponent(type)}&page=${page}`);
@@ -90,7 +91,7 @@ const API = {
       pagination: result.pagination || {},
       type: result.type || type,
     };
-    Cache.set(`browse:${type}:${page}`, normalized, Cache.TTL.browse);
+    Cache.setBrowse(key, normalized);
     return normalized;
   },
 

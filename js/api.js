@@ -156,6 +156,13 @@ const API = {
     return false;
   },
 
+  pickDefaultStreamMethod(anime, ep) {
+    for (const id of this.STREAM_METHOD_ORDER) {
+      if (this.canUseStreamMethod(id, anime, ep)) return id;
+    }
+    return 'mal';
+  },
+
   async getBrowse(type = 'airing', page = 1) {
     const key = `browse:${type}:${page}`;
     const cached = Cache.getBrowse(key);

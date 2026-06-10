@@ -1174,6 +1174,30 @@ html.perf-streaming .brand-name { animation: none; }
 }
 .player-screen iframe { border: 0; }
 
+.player-refresh-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-1);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.player-refresh-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.player-refresh-btn:active svg { transform: rotate(-90deg); }
+.player-refresh-btn svg { transition: transform 0.35s var(--ease-smooth); }
+
 .player-placeholder {
   display: grid;
   place-items: center;
@@ -2588,10 +2612,7 @@ html.perf-streaming .brand-name { animation: none; }
   .tool-btn { padding: 8px 14px; font-size: 12px; white-space: nowrap; min-height: 36px; }
   .tool-check { font-size: 11px; white-space: nowrap; }
 
-  .server-panel { grid-template-columns: 1fr; }
-  .server-panel .watching-msg { display: none; }
-  .server-groups { padding: 10px 12px; }
-  .server-btn { padding: 8px 14px; min-height: 36px; }
+  .server-panel { display: none; }
 
   .episodes-toolbar {
     padding: 10px 12px;

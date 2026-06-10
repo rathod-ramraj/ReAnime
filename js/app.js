@@ -22,7 +22,6 @@ const state = {
   searchIndex: -1,
   searchMode: false,
   playerScrolled: false,
-  streamFailTimer: null,
   streamAttempt: 0,
   navToken: 0,
   homeRetryCount: 0,
@@ -238,6 +237,7 @@ const els = {
   playerIframe: $('#playerIframe'),
   playerPlaceholder: $('#playerPlaceholder'),
   playerWrap: $('#playerWrap'),
+  playerRefreshBtn: $('#playerRefreshBtn'),
   mobileWatchTitle: $('#mobileWatchTitle'),
   mobileWatchEp: $('#mobileWatchEp'),
   detailPanel: $('#detailPanel'),
@@ -358,6 +358,7 @@ function bindEvents() {
   els.dubBtn?.addEventListener('click', () => setLanguage('dub'));
   els.readMore?.addEventListener('click', toggleDescription);
   els.prevEpBtn?.addEventListener('click', () => playAdjacent(-1));
+  els.playerRefreshBtn?.addEventListener('click', refreshPlayer);
   els.nextEpBtn?.addEventListener('click', () => playAdjacent(1));
 
   els.epRange?.addEventListener('change', (e) => {
@@ -1241,8 +1242,10 @@ function applyResolvedData(result, opts = {}) {
   const token = bumpNavigation();
   state.currentAnime = anime;
   state.episodes = episodes;
-  state.streamMethod = streamMethod;
   state.currentEpisode = opts.startEpisode || getFirstEpisodeNumber();
+  state.streamMethod = isMobileView()
+    ? API.pickDefaultStreamMethod(anime, findEpisode(state.currentEpisode))
+    : streamMethod;
   state.language = anime.hasSub !== false ? 'sub' : 'dub';
   alignEpRangeStart(state.currentEpisode);
   if (els.epLangFilter) {
@@ -1631,8 +1634,20 @@ function getEpTitle(num) {
   return `Episode ${num}`;
 }
 
+function getPreferredStreamMethod(ep) {
+  if (isMobileView()) {
+    return API.pickDefaultStreamMethod(state.currentAnime, ep);
+  }
+  return state.streamMethod;
+}
+
 function renderServerButtons() {
   const ep = findEpisode(state.currentEpisode);
+  if (isMobileView()) {
+    if (els.subServers) els.subServers.innerHTML = '';
+    if (els.dubServers) els.dubServers.innerHTML = '';
+    return;
+  }
   const methods = (API.STREAM_SERVERS || []).filter(
     (m) => !ep || API.canUseStreamMethod(m.id, state.currentAnime, ep),
   );
@@ -1683,7 +1698,8 @@ function tryStreamMethod(method, ep, lang) {
 
 function buildStreamChain(ep, lang, preferred) {
   if (!ep || !state.currentAnime) return [];
-  const methods = [...new Set([preferred || state.streamMethod, ...(API.STREAM_METHOD_ORDER || [])])];
+  const pref = preferred || getPreferredStreamMethod(ep);
+  const methods = [...new Set([pref, ...(API.STREAM_METHOD_ORDER || [])])];
   const chain = [];
   const seen = new Set();
 
@@ -1710,10 +1726,6 @@ function findEpisode(epNum) {
 }
 
 function clearStreamFailTimer() {
-  if (state.streamFailTimer) {
-    clearTimeout(state.streamFailTimer);
-    state.streamFailTimer = null;
-  }
   if (state.streamLoadTimer) {
     clearTimeout(state.streamLoadTimer);
     state.streamLoadTimer = null;
@@ -1740,7 +1752,7 @@ function stopPlayer() {
   document.documentElement.classList.remove('perf-streaming');
 }
 
-function loadPlayer(url, fallbackChain = []) {
+function loadPlayer(url) {
   clearStreamFailTimer();
   els.playerPlaceholder.classList.remove('hidden');
   setPlayerPlaceholder('Loading…');
@@ -1755,31 +1767,14 @@ function loadPlayer(url, fallbackChain = []) {
       els.playerIframe.onload = null;
     };
     els.playerIframe.src = url;
-    if (fallbackChain.length > 1) {
-      state.streamFailTimer = setTimeout(() => tryNextStream(fallbackChain, url), 4500);
-    } else {
-      state.streamLoadTimer = setTimeout(() => {
-        if (els.playerIframe.classList.contains('hidden')) {
-          setPlayerPlaceholder('Stream is slow or blocked — try another server below.');
-        }
-      }, 8000);
-    }
+    state.streamLoadTimer = setTimeout(() => {
+      if (els.playerIframe.classList.contains('hidden')) {
+        setPlayerPlaceholder('Stream is slow or blocked — pick another server or tap refresh.');
+      }
+    }, 12000);
   };
 
   setTimeout(load, 120);
-}
-
-function tryNextStream(chain, currentUrl) {
-  const idx = chain.findIndex((s) => s.url === currentUrl);
-  const next = chain[idx + 1];
-  if (!next) {
-    setPlayerPlaceholder('Stream unavailable — try another server below.');
-    return;
-  }
-  state.streamMethod = next.method;
-  state.streamAttempt += 1;
-  renderServerButtons();
-  loadPlayer(next.url, chain);
 }
 
 function getHeaderHeight() {
@@ -1817,6 +1812,12 @@ function updateEpisodeUI(ep) {
   updatePageTitle(state.currentAnime?.title, num);
 }
 
+function refreshPlayer() {
+  if (!state.currentEpisode || !findEpisode(state.currentEpisode)) return;
+  state.streamAttempt = 0;
+  playEpisode(state.currentEpisode, false);
+}
+
 function playEpisode(epNum, scrollToPlayerView = true) {
   const ep = findEpisode(epNum);
   if (!ep) return;
@@ -1828,12 +1829,12 @@ function playEpisode(epNum, scrollToPlayerView = true) {
   if (prevRange !== state.epRangeStart) renderEpRangeSelect();
   else if (els.epRange) els.epRange.value = String(state.epRangeStart);
 
-  const chain = buildStreamChain(ep, state.language, state.streamMethod);
+  const chain = buildStreamChain(ep, state.language, getPreferredStreamMethod(ep));
   const stream = chain[0] || null;
-  if (stream) state.streamMethod = stream.method;
+  if (stream && !isMobileView()) state.streamMethod = stream.method;
 
   if (stream?.url) {
-    loadPlayer(stream.url, chain);
+    loadPlayer(stream.url);
   } else {
     els.playerIframe.src = 'about:blank';
     els.playerIframe.classList.add('hidden');

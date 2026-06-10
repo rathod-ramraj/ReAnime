@@ -4,7 +4,7 @@ async function initDesign() {
     const design = await res.json();
     applyDesignPalette(design);
     applyAnimeXploreTheme();
-    document.title = 'AnimeXplore — Watch Anime Online Free in HD';
+    document.title = 'Home - AnimeXplore - Watch Anime Online, Free Anime Streaming';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = '#050505';
   } catch (e) {

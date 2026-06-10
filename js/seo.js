@@ -30,7 +30,7 @@
   if (year) year.textContent = String(new Date().getFullYear());
 
   window.PageTitle = {
-    default: 'AnimeXplore — Watch Anime Online Free in HD',
+    default: 'Home - AnimeXplore - Watch Anime Online, Free Anime Streaming',
     set(animeTitle, episode) {
       if (animeTitle && episode) {
         document.title = `${animeTitle} · Ep ${episode} — AnimeXplore`;

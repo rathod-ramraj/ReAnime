@@ -24,6 +24,10 @@ const state = {
   playerScrolled: false,
   streamFailTimer: null,
   streamAttempt: 0,
+  navToken: 0,
+  homeRetryCount: 0,
+  _playTimer: null,
+  streamLoadTimer: null,
 };
 
 const CATEGORY_LABELS = {
@@ -57,7 +61,7 @@ function categoryCardHtml(a, i, extraClass = '') {
     </article>`;
 }
 
-function wireCategoryCards(container, items, onOpen) {
+function wireCategoryCards(container, items, onOpen, getEpNum) {
   container.querySelectorAll('.category-card').forEach((card) => {
     const idx = parseInt(card.dataset.idx, 10);
     card.addEventListener('click', (e) => {
@@ -66,7 +70,8 @@ function wireCategoryCards(container, items, onOpen) {
     });
     card.querySelector('.card-dl-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      queueCardDownload(items[idx]);
+      const ep = typeof getEpNum === 'function' ? getEpNum(items[idx], idx) : getEpNum;
+      queueCardDownload(items[idx], ep);
     });
     card.addEventListener('mouseenter', () => {
       const mal = parseInt(card.dataset.mal, 10);
@@ -111,9 +116,56 @@ function isMobileView() {
     || (window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1024);
 }
 
+function syncBannerOffset() {
+  const banner = document.getElementById('proxyBanner');
+  const h = banner && !banner.classList.contains('hidden') ? banner.offsetHeight : 0;
+  document.documentElement.style.setProperty('--banner-h', `${h}px`);
+}
+
+function bumpNavigation() {
+  state.navToken += 1;
+  state.playerScrolled = false;
+  if (state._playTimer) {
+    clearTimeout(state._playTimer);
+    state._playTimer = null;
+  }
+  return state.navToken;
+}
+
+function schedulePlayEpisode(epNum, shouldScroll, token, malId) {
+  const delay = isMobileView() ? 550 : 450;
+  state._playTimer = setTimeout(() => {
+    state._playTimer = null;
+    if (state.navToken !== token) return;
+    if (malId != null && state.currentAnime?.malId !== malId) return;
+    playEpisode(epNum, shouldScroll);
+  }, delay);
+}
+
+function getEpisodeNumbers() {
+  return state.episodes
+    .map((e) => Number(e.number))
+    .filter((n) => !Number.isNaN(n))
+    .sort((a, b) => a - b);
+}
+
+function alignEpRangeStart(epNum) {
+  const numbers = getEpisodeNumbers();
+  if (!numbers.length) {
+    state.epRangeStart = 1;
+    return;
+  }
+  const size = state.epRangeSize;
+  const target = Number(epNum) || numbers[0];
+  const idx = numbers.findIndex((n) => n >= target);
+  const baseIdx = idx >= 0 ? Math.floor(idx / size) * size : 0;
+  state.epRangeStart = numbers[baseIdx];
+}
+
 function syncDeviceMode() {
   document.documentElement.classList.toggle('mobile-mode', isMobileView());
   syncMobileBrowseBar();
+  syncBannerOffset();
 }
 
 function posterSrc(url) {
@@ -210,7 +262,6 @@ const els = {
   continueSection: $('#continueSection'),
   continueRow: $('#continueRow'),
   bookmarkBtn: $('#bookmarkBtn'),
-  azGrid: $('#azGrid'),
   mobileNav: $('#mobileNav'),
   homePopularSection: $('#homePopularSection'),
   homePopularGrid: $('#homePopularGrid'),
@@ -245,8 +296,6 @@ const els = {
   installPromptDesc: $('#installPromptDesc'),
 };
 
-const AZ_LETTERS = ['All', '#', '0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
-
 async function init() {
   syncDeviceMode();
   window.addEventListener('resize', debounce(syncDeviceMode, 150));
@@ -257,12 +306,12 @@ async function init() {
   if (window.DownloadManager) DownloadManager.init();
   window.showToast = showToast;
   bindEvents();
-  renderAzGrid();
   renderContinueWatching();
   setHomeCategory('home');
   showView('home');
   window.addEventListener('message', onPlayerMessage);
   checkServer();
+  syncBannerOffset();
   loadHomeData();
   loadRecent();
   syncMobileBrowseBar();
@@ -278,12 +327,13 @@ async function checkServer() {
   } catch {
     banner.classList.remove('hidden');
   }
+  syncBannerOffset();
 }
 
 function bindEvents() {
-  els.searchInput.addEventListener('input', debounce(onSearchInput, 120));
-  els.searchInput.addEventListener('keydown', onSearchKeydown);
-  els.searchInput.addEventListener('focus', () => {
+  els.searchInput?.addEventListener('input', debounce(onSearchInput, 120));
+  els.searchInput?.addEventListener('keydown', onSearchKeydown);
+  els.searchInput?.addEventListener('focus', () => {
     if (state.searchResults.length) state.searchOpen = true;
     renderSearchDropdown();
   });
@@ -320,6 +370,11 @@ function bindEvents() {
       const n = parseInt(e.target.value, 10);
       if (n > 0) playEpisode(n, true);
     }
+  });
+
+  els.epLangFilter?.addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (val === 'sub' || val === 'dub') setLanguage(val);
   });
 
   const goHome = (e) => {
@@ -591,65 +646,7 @@ function renderLibraryGrid() {
   wireCategoryCards(els.categoryGrid, merged, (item) => {
     if (item.seriesId) openAnikotoSeries(parseInt(item.seriesId, 10));
     else if (item.malId) openSearchResult({ malId: parseInt(item.malId, 10), title: item.title });
-  });
-  els.categoryGrid.querySelectorAll('.category-card').forEach((card) => {
-    const idx = parseInt(card.dataset.idx, 10);
-    const btn = card.querySelector('.card-dl-btn');
-    if (!btn) return;
-    const clone = btn.cloneNode(true);
-    btn.replaceWith(clone);
-    clone.addEventListener('click', (e) => {
-      e.stopPropagation();
-      queueCardDownload(merged[idx], merged[idx].episode);
-    });
-  });
-}
-
-function renderAzGrid() {
-  if (!els.azGrid) return;
-  els.azGrid.innerHTML = AZ_LETTERS.map((l) =>
-    `<button type="button" class="az-btn" data-letter="${l === 'All' ? 'all' : l}">${l}</button>`
-  ).join('');
-  els.azGrid.querySelectorAll('.az-btn').forEach((btn) => {
-    btn.addEventListener('click', () => filterByLetter(btn.dataset.letter));
-  });
-}
-
-async function filterByLetter(letter) {
-  els.azGrid?.querySelectorAll('.az-btn').forEach((b) => {
-    b.classList.toggle('active', b.dataset.letter === letter);
-  });
-  showView('home');
-  els.heroSection?.classList.add('hidden');
-  els.homeTrendingSection?.classList.add('hidden');
-  els.homePopularSection?.classList.add('hidden');
-  els.homeAiringSection?.classList.add('hidden');
-  els.continueSection?.classList.add('hidden');
-  els.categorySection?.classList.remove('hidden');
-  els.downloadsSection?.classList.add('hidden');
-  revealSection(els.categorySection);
-  if (els.categoryTitle) els.categoryTitle.textContent = letter === 'all' ? 'All Anime' : `Anime: ${letter}`;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  els.categoryGrid.innerHTML = Array(8).fill('<div class="skeleton-card"></div>').join('');
-
-  try {
-    const { items } = await API.getBrowse('popular', 1);
-    const pool = items || [];
-    const filtered = pool.filter((a) => matchesLetter(a.title, letter));
-    state.categoryItems = filtered;
-    renderCategoryGrid();
-  } catch (e) {
-    els.categoryGrid.innerHTML = `<div class="empty-state">Failed: ${e.message}</div>`;
-  }
-}
-
-function matchesLetter(title, letter) {
-  const t = (title || '').trim();
-  if (!t) return false;
-  if (letter === 'all') return true;
-  if (letter === '#') return /^[^a-zA-Z0-9]/.test(t);
-  if (letter === '0-9') return /^[0-9]/.test(t);
-  return t.toUpperCase().startsWith(letter);
+  }, (item) => item.episode);
 }
 
 function renderContinueWatching() {
@@ -690,12 +687,15 @@ function renderContinueWatching() {
 }
 
 function resumeWatch(item) {
+  const opts = {
+    autoPlay: false,
+    scrollToPlayer: true,
+    startEpisode: item.episode || null,
+  };
   if (item.seriesId) {
-    openAnikotoSeries(parseInt(item.seriesId, 10));
-    setTimeout(() => { if (item.episode) playEpisode(item.episode, true); }, 1200);
+    openAnikotoSeries(parseInt(item.seriesId, 10), opts);
   } else if (item.malId) {
-    openSearchResult({ malId: parseInt(item.malId, 10), title: item.title });
-    setTimeout(() => { if (item.episode) playEpisode(item.episode, true); }, 1200);
+    openSearchResult({ malId: parseInt(item.malId, 10), title: item.title }, opts);
   }
 }
 
@@ -789,10 +789,14 @@ async function loadHomeData() {
 
   try {
     applyHomeData(await API.getHomeFeed());
+    state.homeRetryCount = 0;
   } catch (e) {
-    if (!cached?.spotlight?.length && els.heroTitle) {
-      els.heroTitle.textContent = 'Could not load — retrying…';
-      setTimeout(() => loadHomeData(), 2000);
+    if (!cached?.spotlight?.length && els.heroTitle && state.homeRetryCount < 5) {
+      state.homeRetryCount += 1;
+      els.heroTitle.textContent = `Could not load — retrying (${state.homeRetryCount}/5)…`;
+      setTimeout(() => loadHomeData(), 2000 * state.homeRetryCount);
+    } else if (els.heroTitle && !cached?.spotlight?.length) {
+      els.heroTitle.textContent = 'Could not load home feed';
     }
   }
 
@@ -845,7 +849,6 @@ function setHomeCategory(cat) {
   els.continueSection?.classList.toggle('hidden', !isHome || !UserStore.getContinueWatching().length);
   els.categorySection?.classList.toggle('hidden', isHome);
   els.downloadsSection?.classList.add('hidden');
-  els.azGrid?.querySelectorAll('.az-btn').forEach((b) => b.classList.remove('active'));
 
   syncMobileBrowseBar();
 
@@ -1055,12 +1058,16 @@ async function onSearchInput(e) {
     return;
   }
 
-  const applyResults = (items) => {
+  const applyResults = (items, rebuildDropdown = true) => {
     state.searchResults = rankSearchResults(q, items);
     state.searchOpen = true;
     state.searchIndex = -1;
-    showSearchResultsView(q);
-    renderSearchDropdown();
+    if (isMobileView()) {
+      showSearchResultsView(q);
+    } else if (state.searchMode) {
+      exitSearchMode();
+    }
+    renderSearchDropdown(rebuildDropdown);
   };
 
   const cached = Cache.getSearch(q);
@@ -1073,8 +1080,10 @@ async function onSearchInput(e) {
     return;
   }
 
-  els.searchResultsGrid.innerHTML = Array(8).fill('<div class="skeleton-card"></div>').join('');
-  showSearchResultsView(q);
+  if (isMobileView()) {
+    els.searchResultsGrid.innerHTML = Array(8).fill('<div class="skeleton-card"></div>').join('');
+    showSearchResultsView(q);
+  }
 
   try {
     const { items } = await API.searchAnime(q);
@@ -1144,10 +1153,12 @@ function renderSearchResultsGrid() {
   });
 }
 
-function renderSearchDropdown() {
+function renderSearchDropdown(rebuild = false) {
   if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) {
     renderMobileSearchResults();
   }
+
+  if (!els.searchDropdown) return;
 
   if (!state.searchOpen || !state.searchResults.length) {
     els.searchDropdown.classList.add('hidden');
@@ -1155,6 +1166,14 @@ function renderSearchDropdown() {
     return;
   }
   els.searchDropdown.classList.remove('hidden');
+
+  if (!rebuild && els.searchDropdown.children.length === state.searchResults.length) {
+    els.searchDropdown.querySelectorAll('.search-item').forEach((el, i) => {
+      el.classList.toggle('active', i === state.searchIndex);
+    });
+    return;
+  }
+
   els.searchDropdown.innerHTML = state.searchResults.map((anime, i) => `
     <div class="search-item${i === state.searchIndex ? ' active' : ''}" data-idx="${i}" data-mal="${anime.malId}">
       ${imgTag(anime.poster, '')}
@@ -1182,8 +1201,13 @@ function onSearchKeydown(e) {
     e.preventDefault();
     if (state.searchResults.length && state.searchIndex >= 0) {
       openSearchResult(state.searchResults[state.searchIndex], { autoPlay: true, scrollToPlayer: true });
-    } else {
-      showSearchResultsView(state.searchQuery);
+    } else if (state.searchResults.length) {
+      if (!isMobileView()) {
+        showSearchResultsView(state.searchQuery);
+        renderSearchResultsGrid();
+      } else {
+        showSearchResultsView(state.searchQuery);
+      }
     }
     return;
   }
@@ -1191,11 +1215,11 @@ function onSearchKeydown(e) {
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     state.searchIndex = Math.min(state.searchIndex + 1, state.searchResults.length - 1);
-    renderSearchDropdown();
+    renderSearchDropdown(false);
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     state.searchIndex = Math.max(state.searchIndex - 1, 0);
-    renderSearchDropdown();
+    renderSearchDropdown(false);
   } else if (e.key === 'Escape') {
     state.searchOpen = false;
     exitSearchMode();
@@ -1214,35 +1238,41 @@ function getFirstEpisodeNumber() {
 
 function applyResolvedData(result, opts = {}) {
   const { anime, episodes, streamMethod } = API.applyResolveResult(result);
+  const token = bumpNavigation();
   state.currentAnime = anime;
   state.episodes = episodes;
   state.streamMethod = streamMethod;
-  state.currentEpisode = getFirstEpisodeNumber();
+  state.currentEpisode = opts.startEpisode || getFirstEpisodeNumber();
   state.language = anime.hasSub !== false ? 'sub' : 'dub';
-  state.epRangeStart = 1;
+  alignEpRangeStart(state.currentEpisode);
+  if (els.epLangFilter) {
+    els.epLangFilter.value = state.language === 'dub' ? 'dub' : 'sub';
+  }
   renderSeries();
   setMobileDetailCollapsed(isMobileView());
   updatePageTitle(anime.title, null);
   if (opts.autoPlay === false) {
-    pinPlayerOnce();
+    if (opts.startEpisode) {
+      playEpisode(opts.startEpisode, opts.scrollToPlayer !== false);
+    } else {
+      pinPlayerOnce();
+    }
     return;
   }
-  const firstEp = getFirstEpisodeNumber();
-  const delay = isMobileView() ? 550 : 450;
+  const firstEp = opts.startEpisode || getFirstEpisodeNumber();
   const shouldScroll = opts.scrollToPlayer !== false;
-  setTimeout(() => playEpisode(firstEp, shouldScroll), delay);
+  schedulePlayEpisode(firstEp, shouldScroll, token, anime.malId);
 }
 
 async function openSearchResult(anime, opts = {}) {
   state.searchOpen = false;
   exitSearchMode();
-  els.searchInput.value = '';
+  els.searchInput && (els.searchInput.value = '');
   if (els.mobileSearchInput) els.mobileSearchInput.value = '';
   closeMobileSearch();
   renderSearchDropdown();
-  state.playerScrolled = false;
   showView('series');
-  els.seriesError.classList.add('hidden');
+  els.seriesError?.classList.add('hidden');
 
   const cached = Cache.getResolve(anime.malId);
   if (cached) {
@@ -1262,14 +1292,13 @@ async function openSearchResult(anime, opts = {}) {
   }
 }
 
-async function openAnikotoSeries(seriesId) {
-  state.playerScrolled = false;
+async function openAnikotoSeries(seriesId, opts = {}) {
   showView('series');
-  els.seriesError.classList.add('hidden');
+  els.seriesError?.classList.add('hidden');
 
   const cached = Cache.getSeries(seriesId);
   if (cached) {
-    applyResolvedData(cached);
+    applyResolvedData(cached, opts);
     setLoading(false);
     renderRelatedList();
     API.resolveBySeriesId(seriesId).catch(() => {});
@@ -1278,12 +1307,12 @@ async function openAnikotoSeries(seriesId) {
 
   setLoading(true);
   try {
-    applyResolvedData(await API.resolveBySeriesId(seriesId));
+    applyResolvedData(await API.resolveBySeriesId(seriesId), opts);
     renderRelatedList();
     setLoading(false);
   } catch (e) {
     setLoading(false);
-    showSeriesError(`Failed: ${e.message}`, () => openAnikotoSeries(seriesId));
+    showSeriesError(`Failed: ${e.message}`, () => openAnikotoSeries(seriesId, opts));
   }
 }
 
@@ -1311,7 +1340,7 @@ function renderSeries() {
   els.ratingStars.textContent = score ? starsFromScore(score) : '☆☆☆☆☆';
 
   els.metaGrid.innerHTML = [
-    metaRow('Type', 'TV'),
+    metaRow('Type', a.type || a.raw?.type || 'TV'),
     metaRow('Year', a.year),
     metaRow('Status', a.status),
     metaRow('Episodes', a.episodes || state.episodes.length),
@@ -1497,14 +1526,18 @@ function starsFromScore(score) {
 }
 
 function renderEpRangeSelect() {
-  const total = state.episodes.length;
+  const numbers = getEpisodeNumbers();
   const size = state.epRangeSize;
-  if (!els.epRange) return;
+  if (!numbers.length || !els.epRange) return;
+  if (!numbers.includes(state.epRangeStart)) alignEpRangeStart(state.currentEpisode);
+
   els.epRange.innerHTML = '';
-  for (let start = 1; start <= total; start += size) {
-    const end = Math.min(start + size - 1, total);
+  for (let i = 0; i < numbers.length; i += size) {
+    const chunk = numbers.slice(i, i + size);
+    const start = chunk[0];
+    const end = chunk[chunk.length - 1];
     const opt = document.createElement('option');
-    opt.value = start;
+    opt.value = String(start);
     opt.textContent = `${String(start).padStart(3, '0')}-${String(end).padStart(3, '0')}`;
     if (start === state.epRangeStart) opt.selected = true;
     els.epRange.appendChild(opt);
@@ -1512,12 +1545,14 @@ function renderEpRangeSelect() {
 }
 
 function getVisibleEpisodes() {
-  const start = state.epRangeStart;
-  const end = start + state.epRangeSize - 1;
-  return state.episodes.filter((ep) => {
-    const n = Number(ep.number);
-    return n >= start && n <= end;
-  });
+  const numbers = getEpisodeNumbers();
+  if (!numbers.length) return [];
+  const startIdx = numbers.indexOf(state.epRangeStart);
+  const from = startIdx >= 0 ? startIdx : 0;
+  const slice = numbers.slice(from, from + state.epRangeSize);
+  return slice
+    .map((n) => state.episodes.find((e) => Number(e.number) === n))
+    .filter(Boolean);
 }
 
 function updateDownloadControls() {
@@ -1689,6 +1724,10 @@ function clearStreamFailTimer() {
     clearTimeout(state.streamFailTimer);
     state.streamFailTimer = null;
   }
+  if (state.streamLoadTimer) {
+    clearTimeout(state.streamLoadTimer);
+    state.streamLoadTimer = null;
+  }
 }
 
 function loadPlayer(url, fallbackChain = []) {
@@ -1706,14 +1745,14 @@ function loadPlayer(url, fallbackChain = []) {
       els.playerIframe.onload = null;
     };
     els.playerIframe.src = url;
-    setTimeout(() => {
-      if (!els.playerIframe.classList.contains('hidden')) return;
-      els.playerIframe.classList.remove('hidden');
-      els.playerPlaceholder.classList.add('hidden');
-    }, 2500);
-
     if (fallbackChain.length > 1) {
       state.streamFailTimer = setTimeout(() => tryNextStream(fallbackChain, url), 4500);
+    } else {
+      state.streamLoadTimer = setTimeout(() => {
+        if (els.playerIframe.classList.contains('hidden')) {
+          setPlayerPlaceholder('Stream is slow or blocked — try another server below.');
+        }
+      }, 8000);
     }
   };
 
@@ -1748,7 +1787,7 @@ function pinPlayerOnce() {
   if (!target) return;
   const offset = getHeaderHeight() + 8;
   const top = target.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+  window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
 }
 
 function scrollToDetail() {
@@ -1774,11 +1813,10 @@ function playEpisode(epNum, scrollToPlayerView = true) {
 
   state.currentEpisode = Number(ep.number);
 
-  const rangeStart = Math.floor((state.currentEpisode - 1) / state.epRangeSize) * state.epRangeSize + 1;
-  if (rangeStart !== state.epRangeStart) {
-    state.epRangeStart = rangeStart;
-    if (els.epRange) els.epRange.value = String(rangeStart);
-  }
+  const prevRange = state.epRangeStart;
+  alignEpRangeStart(state.currentEpisode);
+  if (prevRange !== state.epRangeStart) renderEpRangeSelect();
+  else if (els.epRange) els.epRange.value = String(state.epRangeStart);
 
   const chain = buildStreamChain(ep, state.language, state.streamMethod);
   const stream = chain[0] || null;
@@ -1805,13 +1843,15 @@ function playEpisode(epNum, scrollToPlayerView = true) {
 }
 
 function playAdjacent(dir) {
-  const idx = state.episodes.findIndex((e) => Number(e.number) === Number(state.currentEpisode));
-  const next = state.episodes[idx + dir];
-  if (next) playEpisode(next.number, false);
+  const numbers = getEpisodeNumbers();
+  const idx = numbers.indexOf(Number(state.currentEpisode));
+  const nextNum = numbers[idx + dir];
+  if (nextNum != null) playEpisode(nextNum, false);
 }
 
 function setLanguage(lang) {
   state.language = lang;
+  if (els.epLangFilter && lang !== 'all') els.epLangFilter.value = lang;
   updateLangButtons();
   renderServerButtons();
   playEpisode(state.currentEpisode, false);
@@ -1823,9 +1863,10 @@ function updateLangButtons() {
 }
 
 function updateNavButtons() {
-  const idx = state.episodes.findIndex((e) => Number(e.number) === Number(state.currentEpisode));
+  const numbers = getEpisodeNumbers();
+  const idx = numbers.indexOf(Number(state.currentEpisode));
   if (els.prevEpBtn) els.prevEpBtn.disabled = idx <= 0;
-  if (els.nextEpBtn) els.nextEpBtn.disabled = idx >= state.episodes.length - 1;
+  if (els.nextEpBtn) els.nextEpBtn.disabled = idx < 0 || idx >= numbers.length - 1;
 }
 
 function setLoading(on) {
@@ -1835,6 +1876,7 @@ function setLoading(on) {
 }
 
 function showSeriesError(msg, retryFn) {
+  if (!els.seriesError) return;
   els.seriesError.innerHTML = `
     <span>${esc(msg)}</span>
     ${retryFn ? '<button class="btn-retry" id="retryBtn">↺ Retry</button>' : ''}

@@ -25,6 +25,8 @@
   --font: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
   --sidebar-w: 300px;
   --header-h: 72px;
+  --banner-h: 0px;
+  --sticky-top: calc(var(--header-h) + var(--banner-h));
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-fast: 0.2s;
@@ -1122,16 +1124,39 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .watch-zone {
-  overflow: hidden;
   margin-bottom: 16px;
   border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
 }
 
 .page.series-mode .watch-zone {
+  position: relative;
+  z-index: auto;
+  margin-bottom: 16px;
+  overflow: visible;
+}
+
+.page.series-mode .player-sticky {
   position: sticky;
-  top: var(--header-h);
+  top: var(--sticky-top);
   z-index: 200;
   background: #050505;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+
+.page.series-mode .player-controls {
+  position: relative;
+  z-index: 1;
+  background: rgba(5, 5, 5, 0.98);
+}
+
+#seriesInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .player-screen {
@@ -1279,8 +1304,12 @@ html.perf-streaming .brand-name { animation: none; }
 
 /* Episodes panel */
 .episodes-panel {
-  margin-bottom: 20px;
+  margin-bottom: 0;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
+  scroll-margin-top: calc(var(--header-h) + 56vw + 48px);
+  background: rgba(5, 5, 5, 0.98);
 }
 
 .episodes-toolbar {
@@ -1532,6 +1561,10 @@ html.perf-streaming .brand-name { animation: none; }
 .detail-panel {
   padding: 28px;
   margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+  scroll-margin-top: calc(var(--header-h) + 16px);
+  background: rgba(5, 5, 5, 0.98);
 }
 
 .detail-main {
@@ -1640,8 +1673,8 @@ html.perf-streaming .brand-name { animation: none; }
   width: var(--sidebar-w);
   flex-shrink: 0;
   position: sticky;
-  top: calc(var(--header-h) + var(--page-top-pad) + 32px);
-  max-height: calc(100vh - var(--header-h) - 40px);
+  top: calc(var(--sticky-top) + var(--page-top-pad) + 32px);
+  max-height: calc(100vh - var(--sticky-top) - 40px);
   display: flex;
   flex-direction: column;
   padding: 16px;
@@ -2258,27 +2291,24 @@ html.perf-streaming .brand-name { animation: none; }
 .footer-bg {
   position: absolute;
   inset: 0;
-  background: url('/bg-footer.jpg') right bottom / 100% auto no-repeat;
   pointer-events: none;
+  z-index: 0;
 }
 
-.footer-bg::before {
-  content: '';
+.footer-bg-img {
   position: absolute;
   inset: 0;
-  background: rgba(5, 5, 5, 0.22);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: none;
+  opacity: 1;
 }
 
+.footer-bg::before,
 .footer-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg,
-    #050505 0%,
-    #050505 20%,
-    rgba(5, 5, 5, 0.75) 45%,
-    rgba(5, 5, 5, 0.2) 70%,
-    transparent 100%);
+  display: none;
 }
 
 .footer-inner {
@@ -2286,6 +2316,7 @@ html.perf-streaming .brand-name { animation: none; }
   z-index: 1;
   padding-top: 0;
   padding-bottom: 0;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
 }
 
 .footer-top {
@@ -2374,47 +2405,6 @@ html.perf-streaming .brand-name { animation: none; }
 .footer-col-links a:hover,
 .footer-link-btn:hover { color: var(--text-1); }
 
-.footer-az {
-  padding: 36px 0 32px;
-}
-
-.footer-az-title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: 16px;
-  text-align: center;
-}
-
-.az-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-}
-
-.az-btn {
-  min-width: 34px;
-  height: 34px;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-2);
-  transition: all var(--dur-fast) var(--ease);
-}
-
-.az-btn:hover,
-.az-btn.active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: var(--text-1);
-}
-
 .footer-bottom {
   text-align: center;
   padding-top: 28px;
@@ -2450,6 +2440,18 @@ html.perf-streaming .brand-name { animation: none; }
 .footer-copy {
   font-size: 12px;
   color: var(--text-3);
+}
+
+@media (min-width: 901px) {
+  .page.series-mode .player-sticky {
+    position: static;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .episodes-panel {
+    scroll-margin-top: calc(var(--header-h) + 24px);
+  }
 }
 
 @media (max-width: 900px) {
@@ -2535,6 +2537,7 @@ html.perf-streaming .brand-name { animation: none; }
     flex-direction: column;
     gap: 0;
   }
+  .page.series-mode #seriesInfo { gap: 0; }
   .page.series-mode .sidebar-related { display: none; }
   .page.series-mode .watch-zone,
   .page.series-mode .episodes-panel,
@@ -2546,9 +2549,25 @@ html.perf-streaming .brand-name { animation: none; }
   }
   .page.series-mode .watch-zone {
     margin-bottom: 0;
+  }
+  .page.series-mode .player-sticky {
     position: sticky;
-    top: var(--header-h);
+    top: var(--sticky-top);
     z-index: 200;
+    border-radius: 0;
+  }
+  .page.series-mode .player-controls {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .episodes-panel {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    scroll-margin-top: calc(var(--header-h) + 56vw + 64px);
+  }
+
+  .detail-panel {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin-top: 0;
   }
 
   .mobile-watch-bar {
@@ -2574,7 +2593,6 @@ html.perf-streaming .brand-name { animation: none; }
   .server-groups { padding: 10px 12px; }
   .server-btn { padding: 8px 14px; min-height: 36px; }
 
-  .episodes-panel { border-top: 1px solid rgba(255, 255, 255, 0.06); }
   .episodes-toolbar {
     padding: 10px 12px;
     gap: 8px;
@@ -2656,21 +2674,13 @@ html.perf-streaming .brand-name { animation: none; }
   .section-title, .section-title-gold { font-size: 17px; margin-bottom: 14px; }
   .footer-top { grid-template-columns: 1fr; }
   .site-footer { padding: 32px 0 calc(80px + env(safe-area-inset-bottom)); margin-top: 8px; }
-  .footer-bg {
-    background-position: right bottom;
-    background-size: auto 100%;
-    min-height: 180px;
-  }
-  .footer-bg::before { background: rgba(5, 5, 5, 0.28); }
   .footer-top { gap: 24px; padding-bottom: 28px; }
-  .footer-az { padding: 24px 0 20px; }
 }
 
 @media (max-width: 600px) {
   .category-grid { grid-template-columns: repeat(2, 1fr); }
   .detail-panel .detail-main { grid-template-columns: 1fr; }
   .detail-poster { max-width: 140px; margin: 0 auto; }
-  .az-btn { min-width: 32px; height: 32px; font-size: 11px; }
 }
 
 /* ─── Global focus ring — accessibility ─────────────────────────────────── */

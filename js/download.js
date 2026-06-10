@@ -30,9 +30,9 @@ const DownloadManager = {
     this._write('queue', this.queue.slice(0, 100));
   },
 
-  _emit() {
+  _emit(forceFull = true) {
     this.listeners.forEach((fn) => fn(this.queue));
-    this.renderPanel();
+    if (forceFull) this.renderPanel();
     this._updateBadge();
   },
 
@@ -100,6 +100,11 @@ const DownloadManager = {
       });
       try {
         const res = await fetch(`/api/download/resolve?${qs}`);
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          lastError = errJson.error || `HTTP ${res.status}`;
+          continue;
+        }
         const json = await res.json();
         if (json.ok && json.sources?.length) return json;
         lastError = json.error || lastError;
@@ -170,7 +175,23 @@ const DownloadManager = {
     if (!item) return;
     Object.assign(item, patch);
     this._persist();
-    this._emit();
+    const keys = Object.keys(patch);
+    const progressOnly = keys.length === 1 && keys[0] === 'progress';
+    if (progressOnly) {
+      this._updateProgressDom(id, item);
+      return;
+    }
+    this._emit(true);
+  },
+
+  _updateProgressDom(id, item) {
+    const row = document.querySelector(`.download-item[data-id="${id}"]`);
+    if (!row) {
+      this.renderPanel();
+      return;
+    }
+    const bar = row.querySelector('.download-progress span');
+    if (bar) bar.style.width = `${item.progress || 0}%`;
   },
 
   async processQueue() {
@@ -269,7 +290,7 @@ const DownloadManager = {
       return `
         <article class="download-item" data-id="${item.id}">
           <div class="download-item-poster">
-            ${item.poster ? `<img src="${escAttr(item.poster)}" alt="" loading="lazy" />` : '<span class="download-item-ph">▶</span>'}
+            ${item.poster ? `<img src="${escAttr(API.posterUrl(item.poster))}" alt="" loading="lazy" />` : '<span class="download-item-ph">▶</span>'}
           </div>
           <div class="download-item-body">
             <h4>${escHtml(item.animeTitle)}</h4>

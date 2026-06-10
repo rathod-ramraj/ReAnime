@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="AnimeXplore" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>AnimeXplore — Watch Anime Online Free in HD</title>
+    <title>Home - AnimeXplore - Watch Anime Online, Free Anime Streaming</title>
     <meta name="description" content="AnimeXplore lets you search, browse, and watch anime online in HD. Explore trending series, movies, top airing shows, and popular titles — sub and dub." />
     <meta name="keywords" content="watch anime online, anime streaming, anime HD, sub anime, dub anime, trending anime, anime movies, TV series anime, AnimeXplore" />
     <meta name="author" content="AnimeXplore" />
@@ -20,13 +20,13 @@
     <link rel="manifest" href="/manifest.json" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="AnimeXplore" />
-    <meta property="og:title" content="AnimeXplore — Watch Anime Online Free in HD" />
+    <meta property="og:title" content="Home - AnimeXplore - Watch Anime Online, Free Anime Streaming" />
     <meta property="og:description" content="Search and stream anime in HD. Browse trending, movies, TV series, most popular, and top airing anime on AnimeXplore." />
     <meta property="og:image" content="/favicon.png" id="ogImage" />
     <meta property="og:url" content="/" id="ogUrl" />
     <meta property="og:locale" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="AnimeXplore — Watch Anime Online Free in HD" />
+    <meta name="twitter:title" content="Home - AnimeXplore - Watch Anime Online, Free Anime Streaming" />
     <meta name="twitter:description" content="Search and stream anime in HD. Trending, movies, TV series, and top airing shows." />
     <meta name="twitter:image" content="/favicon.png" id="twitterImage" />
     <script type="application/ld+json" id="schemaWebSite">
@@ -47,7 +47,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/style.css?v=6" />
 </head>
 
 <body>
@@ -232,21 +232,24 @@
                 <div id="seriesInfo">
                     <!-- Watch zone: player first (anikoto style) -->
                     <div class="watch-zone glass-panel" id="playerWrap">
-                        <div class="mobile-watch-bar" id="mobileWatchBar">
-                            <div class="mobile-watch-text">
-                                <p class="mobile-watch-title" id="mobileWatchTitle">—</p>
-                                <p class="mobile-watch-ep" id="mobileWatchEp">Episode —</p>
+                        <div class="player-sticky">
+                            <div class="mobile-watch-bar" id="mobileWatchBar">
+                                <div class="mobile-watch-text">
+                                    <p class="mobile-watch-title" id="mobileWatchTitle">—</p>
+                                    <p class="mobile-watch-ep" id="mobileWatchEp">Episode —</p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="player-screen">
-                            <iframe id="playerIframe" class="hidden" allowfullscreen scrolling="no"
-                                referrerpolicy="no-referrer-when-downgrade"></iframe>
-                            <div class="player-placeholder" id="playerPlaceholder">
-                                <span class="player-placeholder-icon">▶</span>
-                                Select an episode below to start watching
+                            <div class="player-screen">
+                                <iframe id="playerIframe" class="hidden" allowfullscreen scrolling="no"
+                                    referrerpolicy="no-referrer-when-downgrade"></iframe>
+                                <div class="player-placeholder" id="playerPlaceholder">
+                                    <span class="player-placeholder-icon">▶</span>
+                                    Select an episode below to start watching
+                                </div>
                             </div>
                         </div>
 
+                        <div class="player-controls">
                         <div class="player-toolbar">
                             <div class="toolbar-left">
                                 <button class="tool-btn" id="prevEpBtn" title="Previous">◀ Prev</button>
@@ -275,6 +278,7 @@
                                     <div class="server-btns" id="dubServers"></div>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     </div>
 
@@ -381,7 +385,9 @@
     </nav>
 
     <footer class="site-footer" role="contentinfo">
-        <div class="footer-bg" aria-hidden="true"></div>
+        <div class="footer-bg" aria-hidden="true">
+            <img src="/bg-footer.jpg" alt="" class="footer-bg-img" width="1200" height="600" decoding="async" loading="lazy" />
+        </div>
         <div class="footer-inner container-max">
             <div class="footer-top">
                 <div class="footer-brand-block">
@@ -433,11 +439,6 @@
                     </ul>
                 </nav>
             </div>
-
-            <section class="footer-az">
-                <h3 class="footer-az-title">Browse A–Z</h3>
-                <div class="az-grid" id="azGrid"></div>
-            </section>
 
             <div class="footer-bottom">
                 <p class="footer-browser-tip">
@@ -496,22 +497,22 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+                navigator.serviceWorker.register('/sw.js?v=3', { scope: '/' }).catch(function () {});
             });
         }
     </script>
-    <script src="js/seo.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/cache.js"></script>
-    <script src="js/download.js"></script>
-    <script src="js/design.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/seo.js?v=2"></script>
+    <script src="js/storage.js?v=2"></script>
+    <script src="js/cache.js?v=2"></script>
+    <script src="js/download.js?v=2"></script>
+    <script src="js/design.js?v=2"></script>
+    <script src="js/api.js?v=2"></script>
+    <script src="js/app.js?v=2"></script>
     <script>
         // DevTools + right-click protection (desktop only — skipped on mobile for UX)
         (function () {
             var isMobile = window.matchMedia('(pointer: coarse)').matches
-                || window.matchMedia('(max-width: 768px)').matches
+                || window.matchMedia('(max-width: 900px)').matches
                 || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
 
             if (isMobile) return;
@@ -556,7 +557,7 @@
         // Basic client-side bot / automation guard (desktop crawlers only)
         (function () {
             var isMobile = window.matchMedia('(pointer: coarse)').matches
-                || window.matchMedia('(max-width: 768px)').matches
+                || window.matchMedia('(max-width: 900px)').matches
                 || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
             if (isMobile) return;
 

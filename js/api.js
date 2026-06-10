@@ -35,7 +35,14 @@ const API = {
           lastErr = new Error(`HTTP ${res.status}`);
           continue;
         }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          let detail = `HTTP ${res.status}`;
+          try {
+            const errJson = await res.json();
+            if (errJson?.error) detail = errJson.error;
+          } catch { /* ignore */ }
+          throw new Error(detail);
+        }
         return res.json();
       } catch (err) {
         lastErr = err;

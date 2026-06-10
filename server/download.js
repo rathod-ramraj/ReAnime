@@ -171,7 +171,7 @@ async function streamHlsToResponse(playlistUrl, res, filename) {
 
   for (const segUrl of segments) {
     const segRes = await fetch(segUrl, { headers: { 'User-Agent': UA, Referer: 'https://megaplay.buzz/' } });
-    if (!segRes.ok) continue;
+    if (!segRes.ok) throw new Error(`Segment failed HTTP ${segRes.status}`);
     const buf = Buffer.from(await segRes.arrayBuffer());
     if (!res.write(buf)) {
       await new Promise((r) => res.once('drain', r));

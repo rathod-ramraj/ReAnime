@@ -44,7 +44,13 @@ function isBlockedBot(req) {
   return BOT_PATTERNS.some((p) => p.test(ua));
 }
 
+function isApiRoute(req) {
+  const path = (req.path || req.url || '').split('?')[0];
+  return path.startsWith('/api/') || path.startsWith('/proxy/');
+}
+
 function botGuardMiddleware(req, res, next) {
+  if (isApiRoute(req)) return next();
   if (isBlockedBot(req)) {
     return res.status(403).type('text/plain').send('Access denied. Automated access is not permitted.');
   }

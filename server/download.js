@@ -1,27 +1,59 @@
 const MEGAPLAY = 'https://megaplay.buzz/stream';
+const TRYEMBED = 'https://tryembed.us.cc/embed/anime';
+const VIDNEST = 'https://vidnest.fun/anime';
+const VIDNEST_PAHE = 'https://vidnest.fun/animepahe';
+const ANIMO_CDN = 'https://cdn.4animo.xyz/embed';
+const ANIMO_QS = 'k=1&autoPlay=1&skipIntro=1&skipOutro=1';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
+function buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub' }) {
+  const ep = Number(episode);
+  const track = lang === 'dub' ? 'dub' : 'sub';
+
+  if ((method === 'embed' || method === 'embed-hd2') && embedId) {
+    const v = method === 'embed-hd2' ? 's-1' : 's-2';
+    return `${MEGAPLAY}/${v}/${embedId}/${track}`;
+  }
+  if (method === 'mal' && malId && ep) return `${MEGAPLAY}/mal/${malId}/${ep}/${track}`;
+  if (method === 'ani' && aniId && ep) return `${MEGAPLAY}/ani/${aniId}/${ep}/${track}`;
+  if (method === 'tryembed' && aniId && ep) {
+    return `${TRYEMBED}/${aniId}/${ep}/${track}?autoplay=true&autoSkip=true`;
+  }
+  if (method === 'vidnest' && aniId && ep) return `${VIDNEST}/${aniId}/${ep}/${track}`;
+  if (method === 'vidnest-pahe' && aniId && ep) return `${VIDNEST_PAHE}/${aniId}/${ep}/${track}`;
+  if (method === 'animo-hd1' && aniId && ep) {
+    return `${ANIMO_CDN}/hd-1/ani/${aniId}/${ep}/${track}?${ANIMO_QS}`;
+  }
+  if (method === 'animo-hd2' && aniId && ep) {
+    return `${ANIMO_CDN}/hd-2/ani/${aniId}/${ep}/${track}?${ANIMO_QS}`;
+  }
+  if (method === 'animo-mal' && malId && ep) {
+    return `${ANIMO_CDN}/hd-1/mal/${malId}/${ep}/${track}?${ANIMO_QS}`;
+  }
+  if (method === 'animo-embed' && embedId) {
+    const id = String(embedId).includes('/') ? embedId : `s-2/${embedId}`;
+    return `${ANIMO_CDN}/?server=hd-2&id=af:${id}/${track}&${ANIMO_QS}`;
+  }
+  return null;
+}
+
+const STREAM_METHOD_ORDER = [
+  'embed', 'embed-hd2', 'tryembed', 'vidnest', 'vidnest-pahe',
+  'animo-hd1', 'animo-hd2', 'animo-embed', 'animo-mal', 'ani', 'mal',
+];
+
 function buildStreamUrls({ method, embedId, malId, aniId, episode, lang = 'sub' }) {
   const urls = [];
-  const add = (url, m) => urls.push({ url, method: m });
+  const add = (url, m) => { if (url) urls.push({ url, method: m }); };
 
-  const embedUrls = () => {
-    if (!embedId) return;
-    add(`${MEGAPLAY}/s-2/${embedId}/${lang}`, 'embed');
-    add(`${MEGAPLAY}/s-1/${embedId}/${lang}`, 'embed');
-  };
+  const order = method
+    ? [method, ...STREAM_METHOD_ORDER.filter((m) => m !== method)]
+    : STREAM_METHOD_ORDER;
 
-  if (method === 'embed') embedUrls();
-  else if (method === 'mal' && malId && episode) {
-    add(`${MEGAPLAY}/mal/${malId}/${episode}/${lang}`, 'mal');
-  } else if (method === 'ani' && aniId && episode) {
-    add(`${MEGAPLAY}/ani/${aniId}/${episode}/${lang}`, 'ani');
+  for (const m of order) {
+    add(buildStreamUrl({ method: m, embedId, malId, aniId, episode, lang }), m);
   }
-
-  embedUrls();
-  if (malId && episode) add(`${MEGAPLAY}/mal/${malId}/${episode}/${lang}`, 'mal');
-  if (aniId && episode) add(`${MEGAPLAY}/ani/${aniId}/${episode}/${lang}`, 'ani');
 
   const seen = new Set();
   return urls.filter((u) => {

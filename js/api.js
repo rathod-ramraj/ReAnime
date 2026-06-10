@@ -1,5 +1,35 @@
 const API = {
   MEGAPLAY: 'https://megaplay.buzz/stream',
+  TRYEMBED: 'https://tryembed.us.cc/embed/anime',
+  VIDNEST: 'https://vidnest.fun/anime',
+  VIDNEST_PAHE: 'https://vidnest.fun/animepahe',
+  ANIMO_CDN: 'https://cdn.4animo.xyz/embed',
+
+  STREAM_SERVERS: [
+    { id: 'embed', label: 'MegaPlay HD-1' },
+    { id: 'embed-hd2', label: 'MegaPlay HD-2' },
+    { id: 'tryembed', label: 'TryEmbed' },
+    { id: 'vidnest', label: 'VidNest' },
+    { id: 'vidnest-pahe', label: 'VidNest Pahe' },
+    { id: 'animo-hd1', label: '4Animo HD-1' },
+    { id: 'animo-hd2', label: '4Animo HD-2' },
+    { id: 'animo-embed', label: '4Animo Embed' },
+    { id: 'animo-mal', label: '4Animo MAL' },
+    { id: 'ani', label: 'MegaPlay Ani' },
+    { id: 'mal', label: 'MegaPlay MAL' },
+  ],
+
+  STREAM_METHOD_ORDER: [
+    'embed', 'embed-hd2', 'tryembed', 'vidnest', 'vidnest-pahe',
+    'animo-hd1', 'animo-hd2', 'animo-embed', 'animo-mal', 'ani', 'mal',
+  ],
+
+  PLAYER_ORIGINS: [
+    'https://megaplay.buzz',
+    'https://tryembed.us.cc',
+    'https://cdn.4animo.xyz',
+    'https://vidnest.fun',
+  ],
 
   posterUrl(url) {
     if (!url || typeof url !== 'string') return '';
@@ -75,16 +105,55 @@ const API = {
   },
 
   buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub', variant = 's-2' }) {
-    if (method === 'embed' && embedId) {
-      return `${this.MEGAPLAY}/${variant}/${embedId}/${lang}`;
+    const ep = Number(episode);
+    const track = lang === 'dub' ? 'dub' : 'sub';
+    const animoQs = 'k=1&autoPlay=1&skipIntro=1&skipOutro=1';
+
+    if ((method === 'embed' || method === 'embed-hd2') && embedId) {
+      const v = method === 'embed-hd2' ? 's-1' : variant;
+      return `${this.MEGAPLAY}/${v}/${embedId}/${track}`;
     }
-    if (method === 'mal' && malId) {
-      return `${this.MEGAPLAY}/mal/${malId}/${episode}/${lang}`;
+    if (method === 'mal' && malId && ep) {
+      return `${this.MEGAPLAY}/mal/${malId}/${ep}/${track}`;
     }
-    if (method === 'ani' && aniId) {
-      return `${this.MEGAPLAY}/ani/${aniId}/${episode}/${lang}`;
+    if (method === 'ani' && aniId && ep) {
+      return `${this.MEGAPLAY}/ani/${aniId}/${ep}/${track}`;
+    }
+    if (method === 'tryembed' && aniId && ep) {
+      return `${this.TRYEMBED}/${aniId}/${ep}/${track}?autoplay=true&autoSkip=true`;
+    }
+    if (method === 'vidnest' && aniId && ep) {
+      return `${this.VIDNEST}/${aniId}/${ep}/${track}`;
+    }
+    if (method === 'vidnest-pahe' && aniId && ep) {
+      return `${this.VIDNEST_PAHE}/${aniId}/${ep}/${track}`;
+    }
+    if (method === 'animo-hd1' && aniId && ep) {
+      return `${this.ANIMO_CDN}/hd-1/ani/${aniId}/${ep}/${track}?${animoQs}`;
+    }
+    if (method === 'animo-hd2' && aniId && ep) {
+      return `${this.ANIMO_CDN}/hd-2/ani/${aniId}/${ep}/${track}?${animoQs}`;
+    }
+    if (method === 'animo-mal' && malId && ep) {
+      return `${this.ANIMO_CDN}/hd-1/mal/${malId}/${ep}/${track}?${animoQs}`;
+    }
+    if (method === 'animo-embed' && embedId) {
+      const id = String(embedId).includes('/') ? embedId : `s-2/${embedId}`;
+      return `${this.ANIMO_CDN}/?server=hd-2&id=af:${id}/${track}&${animoQs}`;
     }
     return null;
+  },
+
+  canUseStreamMethod(method, anime, ep) {
+    if (!anime || !ep) return false;
+    if (method === 'embed' || method === 'embed-hd2' || method === 'animo-embed') {
+      return !!(ep.embedId || ep.embedUrl);
+    }
+    if (method === 'mal' || method === 'animo-mal') return !!anime.malId;
+    if (['ani', 'tryembed', 'vidnest', 'vidnest-pahe', 'animo-hd1', 'animo-hd2'].includes(method)) {
+      return !!anime.aniId;
+    }
+    return false;
   },
 
   async getBrowse(type = 'airing', page = 1) {

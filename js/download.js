@@ -89,7 +89,7 @@ const DownloadManager = {
   },
 
   async resolveSources(anime, ep, lang, preferredMethod) {
-    const methods = [...new Set([preferredMethod, 'embed', 'mal', 'ani'].filter(Boolean))];
+    const methods = [...new Set([preferredMethod, ...(API.STREAM_METHOD_ORDER || ['embed', 'mal', 'ani'])].filter(Boolean))];
     let lastError = 'No download source available';
 
     for (const method of methods) {

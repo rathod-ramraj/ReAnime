@@ -1265,6 +1265,7 @@ function applyResolvedData(result, opts = {}) {
 }
 
 async function openSearchResult(anime, opts = {}) {
+  if (state.view === 'series') stopPlayer();
   state.searchOpen = false;
   exitSearchMode();
   els.searchInput && (els.searchInput.value = '');
@@ -1293,6 +1294,7 @@ async function openSearchResult(anime, opts = {}) {
 }
 
 async function openAnikotoSeries(seriesId, opts = {}) {
+  if (state.view === 'series') stopPlayer();
   showView('series');
   els.seriesError?.classList.add('hidden');
 
@@ -1630,11 +1632,10 @@ function getEpTitle(num) {
 }
 
 function renderServerButtons() {
-  const methods = [
-    { id: 'embed', label: 'HD-1' },
-    { id: 'mal', label: 'MAL' },
-    { id: 'ani', label: 'AniList' },
-  ];
+  const ep = findEpisode(state.currentEpisode);
+  const methods = (API.STREAM_SERVERS || []).filter(
+    (m) => !ep || API.canUseStreamMethod(m.id, state.currentAnime, ep),
+  );
 
   const render = (container, lang) => {
     if (!container) return;
@@ -1658,50 +1659,39 @@ function renderServerButtons() {
   render(els.dubServers, 'dub');
 }
 
-function tryStreamMethod(method, ep, lang, variant) {
+function tryStreamMethod(method, ep, lang) {
   const a = state.currentAnime;
   const epNum = Number(ep.number);
-  if (method === 'embed') {
-    if (ep.embedId) {
-      return { url: API.buildStreamUrl({ method: 'embed', embedId: ep.embedId, lang, variant }), method: 'embed', variant };
-    }
-    if (ep.embedUrl) {
-      if (typeof ep.embedUrl === 'string') return { url: ep.embedUrl, method: 'embed' };
-      if (ep.embedUrl[lang]) return { url: ep.embedUrl[lang], method: 'embed' };
-      if (ep.embedUrl.sub) return { url: ep.embedUrl.sub, method: 'embed' };
-    }
+
+  if ((method === 'embed' || method === 'embed-hd2') && ep.embedUrl && !ep.embedId) {
+    if (typeof ep.embedUrl === 'string') return { url: ep.embedUrl, method };
+    if (ep.embedUrl[lang]) return { url: ep.embedUrl[lang], method };
+    if (ep.embedUrl.sub) return { url: ep.embedUrl.sub, method };
   }
-  if (method === 'ani' && a.aniId) {
-    return { url: API.buildStreamUrl({ method: 'ani', aniId: a.aniId, episode: epNum, lang }), method: 'ani' };
-  }
-  if (method === 'mal' && a.malId) {
-    return { url: API.buildStreamUrl({ method: 'mal', malId: a.malId, episode: epNum, lang }), method: 'mal' };
-  }
+
+  const url = API.buildStreamUrl({
+    method,
+    embedId: ep.embedId,
+    malId: a.malId,
+    aniId: a.aniId,
+    episode: epNum,
+    lang,
+  });
+  if (url) return { url, method };
   return null;
 }
 
 function buildStreamChain(ep, lang, preferred) {
   if (!ep || !state.currentAnime) return [];
-  const methods = [...new Set([preferred || state.streamMethod, 'embed', 'mal', 'ani'])];
-  const variants = ['s-2', 's-1'];
+  const methods = [...new Set([preferred || state.streamMethod, ...(API.STREAM_METHOD_ORDER || [])])];
   const chain = [];
   const seen = new Set();
 
   for (const m of methods) {
-    if (m === 'embed') {
-      for (const v of variants) {
-        const hit = tryStreamMethod('embed', ep, lang, v);
-        if (hit?.url && !seen.has(hit.url)) {
-          seen.add(hit.url);
-          chain.push(hit);
-        }
-      }
-    } else {
-      const hit = tryStreamMethod(m, ep, lang);
-      if (hit?.url && !seen.has(hit.url)) {
-        seen.add(hit.url);
-        chain.push(hit);
-      }
+    const hit = tryStreamMethod(m, ep, lang);
+    if (hit?.url && !seen.has(hit.url)) {
+      seen.add(hit.url);
+      chain.push(hit);
     }
   }
   return chain;
@@ -1728,6 +1718,26 @@ function clearStreamFailTimer() {
     clearTimeout(state.streamLoadTimer);
     state.streamLoadTimer = null;
   }
+}
+
+function stopPlayer() {
+  clearStreamFailTimer();
+  if (state._playTimer) {
+    clearTimeout(state._playTimer);
+    state._playTimer = null;
+  }
+  state.streamAttempt = 0;
+  const iframe = els.playerIframe;
+  if (!iframe) return;
+  iframe.onload = null;
+  try {
+    iframe.contentWindow?.stop?.();
+  } catch (_) { /* cross-origin */ }
+  iframe.src = 'about:blank';
+  iframe.classList.add('hidden');
+  els.playerPlaceholder?.classList.remove('hidden');
+  setPlayerPlaceholder('Select an episode to play');
+  document.documentElement.classList.remove('perf-streaming');
 }
 
 function loadPlayer(url, fallbackChain = []) {
@@ -1907,6 +1917,11 @@ function showView(view) {
     els.mobileNav?.querySelectorAll('.mob-nav-item').forEach((b) => b.classList.remove('active'));
   }
 
+  if (view === 'home' && state.view === 'series') {
+    bumpNavigation();
+    stopPlayer();
+  }
+
   if (state.view === view) return;
 
   const prevEl = state.view === 'home' ? els.homeView : els.seriesView;
@@ -1937,13 +1952,28 @@ function updatePageControls() {
   if (els.pageInfo) els.pageInfo.textContent = p ? `${p.page}/${p.total_pages}` : '';
 }
 
-function onPlayerMessage(event) {
-  if (event.origin !== 'https://megaplay.buzz') return;
-  const data = event.data;
-  if (!data || !els.autoNext?.checked) return;
-  if (data === 'ended' || data?.event === 'ended' || data?.type === 'ended') {
-    playAdjacent(1);
+function parsePlayerMessage(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return raw; }
   }
+  return raw;
+}
+
+function isEpisodeEnded(data) {
+  if (!data) return false;
+  if (data === 'ended') return true;
+  if (data.event === 'ended' || data.event === 'complete') return true;
+  if (data.type === 'ended') return true;
+  if (data.type === 'PLAYER_EVENT' && data.data?.event === 'ended') return true;
+  return false;
+}
+
+function onPlayerMessage(event) {
+  if (!API.PLAYER_ORIGINS?.includes(event.origin)) return;
+  if (!els.autoNext?.checked) return;
+  const data = parsePlayerMessage(event.data);
+  if (isEpisodeEnded(data)) playAdjacent(1);
 }
 
 function esc(str) {

@@ -1,11 +1,16 @@
 const { TTL } = require('./cache');
+const { Titles } = require('./titles');
 
 function normalizeJikan(item) {
   return {
     source: 'jikan',
     seriesId: null,
-    title: item.title,
+    title: Titles.buildDisplayTitle(item),
+    titleEnglish: item.title_english || null,
+    titleRomaji: item.title || null,
+    synonyms: item.title_synonyms || [],
     altTitle: item.title_japanese,
+    rating: item.rating || null,
     poster: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url,
     year: item.year,
     score: item.score,
@@ -213,7 +218,7 @@ function createResolver({ cache, upstream }) {
 
       const [airing, popular] = await Promise.all([
         fetchJSON(`${upstream.jikan}/top/anime?filter=airing&page=1&limit=12`).catch(() => ({ data: [] })),
-        fetchJSON(`${upstream.jikan}/top/anime?filter=bypopularity&page=1&limit=24`).catch(() => ({ data: [] })),
+        fetchJSON(`${upstream.jikan}/top/anime?filter=bypopularity&page=1&limit=36`).catch(() => ({ data: [] })),
       ]);
 
       const result = {

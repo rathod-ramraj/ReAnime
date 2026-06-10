@@ -312,6 +312,11 @@ async function init() {
   window.addEventListener('message', onPlayerMessage);
   checkServer();
   syncBannerOffset();
+  window.__onHomeFeedUpdate = (data) => {
+    if (state.view === 'home' && state.homeCategory === 'home' && !state.searchMode) {
+      applyHomeData(data);
+    }
+  };
   loadHomeData();
   loadRecent();
   syncMobileBrowseBar();
@@ -331,7 +336,7 @@ async function checkServer() {
 }
 
 function bindEvents() {
-  els.searchInput?.addEventListener('input', debounce(onSearchInput, 120));
+  els.searchInput?.addEventListener('input', debounce(onSearchInput, 80));
   els.searchInput?.addEventListener('keydown', onSearchKeydown);
   els.searchInput?.addEventListener('focus', () => {
     if (state.searchResults.length) state.searchOpen = true;
@@ -448,7 +453,7 @@ function bindEvents() {
   els.mobileSearchInput?.addEventListener('input', debounce((e) => {
     els.searchInput.value = e.target.value;
     onSearchInput({ target: els.searchInput });
-  }, 120));
+  }, 80));
 
   els.mobileSearchInput?.addEventListener('keydown', (e) => {
     els.searchInput.value = els.mobileSearchInput.value;
@@ -499,7 +504,7 @@ function renderMobileSearchResults() {
       ${imgTag(anime.poster, '')}
       <div>
         <div class="search-item-title">${esc(anime.title)}</div>
-        <div class="search-item-meta">${anime.year || ''} · ${anime.episodes || '?'} eps</div>
+        <div class="search-item-meta">${esc(searchResultMeta(anime))}</div>
       </div>
     </button>`).join('');
 
@@ -777,40 +782,88 @@ function renderRelatedList() {
 function applyHomeData(data) {
   if (!data) return;
   state.spotlightItems = data.spotlight || [];
-  state.trendingItems = data.trending || [];
+  if (data.trending?.length) state.trendingItems = data.trending;
   state.spotlightIndex = 0;
   renderSpotlight();
-  renderTrending();
+  if (state.trendingItems.length) {
+    renderTrending();
+    revealSection(els.homeTrendingSection);
+  }
   startSpotlightAutoplay();
 }
 
 async function loadHomeData() {
   const cached = Cache.getHome();
-  if (cached?.spotlight?.length) applyHomeData(cached);
+  if (cached?.spotlight?.length || cached?.trending?.length) applyHomeData(cached);
 
-  try {
-    applyHomeData(await API.getHomeFeed());
-    state.homeRetryCount = 0;
-  } catch (e) {
-    if (!cached?.spotlight?.length && els.heroTitle && state.homeRetryCount < 5) {
-      state.homeRetryCount += 1;
-      els.heroTitle.textContent = `Could not load — retrying (${state.homeRetryCount}/5)…`;
-      setTimeout(() => loadHomeData(), 2000 * state.homeRetryCount);
-    } else if (els.heroTitle && !cached?.spotlight?.length) {
-      els.heroTitle.textContent = 'Could not load home feed';
-    }
-  }
+  const homePromise = API.getHomeFeed()
+    .then((data) => {
+      applyHomeData(data);
+      state.homeRetryCount = 0;
+    })
+    .catch((e) => {
+      if (!cached?.spotlight?.length && els.heroTitle && state.homeRetryCount < 5) {
+        state.homeRetryCount += 1;
+        els.heroTitle.textContent = `Could not load — retrying (${state.homeRetryCount}/5)…`;
+        setTimeout(() => loadHomeData(), 2000 * state.homeRetryCount);
+      } else if (els.heroTitle && !cached?.spotlight?.length) {
+        els.heroTitle.textContent = 'Could not load home feed';
+      }
+      return e;
+    });
 
-  // Load popular + airing grids in parallel, non-blocking
+  await Promise.all([homePromise, loadTrendingSection()]);
+
   loadHomeGrid('popular', els.homePopularGrid);
   loadHomeGrid('airing', els.homeAiringGrid);
 }
 
+async function loadTrendingSection() {
+  if (!els.trendingRow) return;
+
+  if (!state.trendingItems.length) {
+    els.trendingRow.innerHTML = Array(6).fill('<div class="skeleton-trending"></div>').join('');
+  }
+
+  try {
+    const [airing, popular] = await Promise.all([
+      API.getBrowse('airing', 1),
+      API.getBrowse('popular', 1),
+    ]);
+    const seen = new Set();
+    const merged = [];
+    for (const list of [airing.items, popular.items]) {
+      for (const a of list || []) {
+        const id = a.malId;
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        merged.push(a);
+      }
+    }
+    if (merged.length) {
+      state.trendingItems = merged.slice(0, HOME_GRID_LIMIT);
+      renderTrending();
+      revealSection(els.homeTrendingSection);
+    } else if (!state.trendingItems.length) {
+      els.trendingRow.innerHTML = '<div class="empty-state">No trending anime</div>';
+    }
+  } catch {
+    if (!state.trendingItems.length) {
+      els.trendingRow.innerHTML = '<div class="empty-state">No trending anime</div>';
+    }
+  }
+}
+
+const HOME_GRID_LIMIT = 36;
+
 async function loadHomeGrid(type, gridEl) {
   if (!gridEl) return;
   try {
-    const { items } = await API.getBrowse(type, 1);
-    const slice = (items || []).slice(0, 12);
+    const [p1, p2] = await Promise.all([
+      API.getBrowse(type, 1),
+      API.getBrowse(type, 2),
+    ]);
+    const slice = [...(p1.items || []), ...(p2.items || [])].slice(0, HOME_GRID_LIMIT);
     if (!slice.length) { gridEl.innerHTML = ''; return; }
     gridEl.innerHTML = slice.map((a, i) => categoryCardHtml({ ...a, type: a.type || 'TV' }, i)).join('');
     wireCategoryCards(gridEl, slice, (item) => openSearchResult(item));
@@ -951,7 +1004,7 @@ function renderHeroDots(total, activeIdx) {
 
 function renderTrending() {
   if (!els.trendingRow) return;
-  const items = state.trendingItems.slice(0, 20);
+  const items = state.trendingItems.slice(0, HOME_GRID_LIMIT);
   if (!items.length) {
     els.trendingRow.innerHTML = '<div class="empty-state">No trending anime</div>';
     return;
@@ -1034,18 +1087,16 @@ function openSpotlightAnime(watchNow = true) {
 }
 
 function rankSearchResults(query, items) {
+  if (typeof Titles !== 'undefined') {
+    return Titles.filterAndRankSearch(query, items);
+  }
   const q = query.toLowerCase().trim();
-  return [...items].sort((a, b) => {
-    const ta = (a.title || '').toLowerCase();
-    const tb = (b.title || '').toLowerCase();
-    const score = (t) => {
-      if (t === q) return 0;
-      if (t.startsWith(q)) return 1;
-      if (t.includes(q)) return 2;
-      return 3;
-    };
-    return score(ta) - score(tb);
-  });
+  return [...items].filter((a) => (a.title || '').toLowerCase().includes(q));
+}
+
+function searchResultMeta(anime) {
+  if (typeof Titles !== 'undefined') return Titles.searchMetaLine(anime);
+  return [anime.year || '', anime.episodes ? `${anime.episodes} eps` : ''].filter(Boolean).join(' · ');
 }
 
 async function onSearchInput(e) {
@@ -1055,20 +1106,23 @@ async function onSearchInput(e) {
     state.searchResults = [];
     state.searchOpen = false;
     if (state.searchMode) exitSearchMode();
-    renderSearchDropdown();
+    preserveScroll(() => renderSearchDropdown());
     return;
   }
 
+  hideSearchResultsView();
+
   const applyResults = (items, rebuildDropdown = true) => {
     state.searchResults = rankSearchResults(q, items);
-    state.searchOpen = true;
+    state._lastAppliedQuery = q;
+    state.searchOpen = state.searchResults.length > 0;
     state.searchIndex = -1;
-    if (isMobileView()) {
-      showSearchResultsView(q);
-    } else if (state.searchMode) {
-      exitSearchMode();
-    }
-    renderSearchDropdown(rebuildDropdown);
+    preserveScroll(() => {
+      if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) {
+        renderMobileSearchResults();
+      }
+      renderSearchDropdown(rebuildDropdown);
+    });
   };
 
   const cached = Cache.getSearch(q);
@@ -1079,11 +1133,6 @@ async function onSearchInput(e) {
       applyResults(items.map(API.normalizeJikanAnime));
     }).catch(() => {});
     return;
-  }
-
-  if (isMobileView()) {
-    els.searchResultsGrid.innerHTML = Array(8).fill('<div class="skeleton-card"></div>').join('');
-    showSearchResultsView(q);
   }
 
   try {
@@ -1097,6 +1146,26 @@ async function onSearchInput(e) {
       renderSearchDropdown();
     }
   }
+}
+
+function restoreHomeSections() {
+  const isHome = state.homeCategory === 'home';
+  els.heroSection?.classList.toggle('hidden', !isHome);
+  els.homeTrendingSection?.classList.toggle('hidden', !isHome);
+  els.homePopularSection?.classList.toggle('hidden', !isHome);
+  els.homeAiringSection?.classList.toggle('hidden', !isHome);
+  els.continueSection?.classList.toggle('hidden', !isHome || !UserStore.getContinueWatching().length);
+  els.categorySection?.classList.toggle('hidden', isHome);
+  els.downloadsSection?.classList.add('hidden');
+  els.mobileBrowseBar?.classList.toggle('hidden', !isMobileView() || !isHome || state.searchMode);
+  syncMobileBrowseBar();
+}
+
+function hideSearchResultsView() {
+  if (!state.searchMode) return;
+  state.searchMode = false;
+  els.searchResultsSection?.classList.add('hidden');
+  restoreHomeSections();
 }
 
 function showSearchResultsView(query) {
@@ -1131,8 +1200,18 @@ function exitSearchMode() {
   state.searchMode = false;
   state.searchQuery = '';
   state.searchResults = [];
+  state._submitQuery = '';
+  state._lastAppliedQuery = '';
   els.searchResultsSection?.classList.add('hidden');
-  els.mobileBrowseBar?.classList.remove('hidden');
+  restoreHomeSections();
+}
+
+function preserveScroll(fn) {
+  const y = window.scrollY;
+  fn();
+  requestAnimationFrame(() => {
+    if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y);
+  });
 }
 
 function renderSearchResultsGrid() {
@@ -1155,10 +1234,6 @@ function renderSearchResultsGrid() {
 }
 
 function renderSearchDropdown(rebuild = false) {
-  if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) {
-    renderMobileSearchResults();
-  }
-
   if (!els.searchDropdown) return;
 
   if (!state.searchOpen || !state.searchResults.length) {
@@ -1180,7 +1255,7 @@ function renderSearchDropdown(rebuild = false) {
       ${imgTag(anime.poster, '')}
       <div>
         <div class="search-item-title">${esc(anime.title)}</div>
-        <div class="search-item-meta">${anime.year || ''} · ${anime.episodes || '?'} eps</div>
+        <div class="search-item-meta">${esc(searchResultMeta(anime))}</div>
       </div>
     </div>`).join('');
 
@@ -1197,19 +1272,65 @@ function renderSearchDropdown(rebuild = false) {
   }
 }
 
+function submitSearch() {
+  const q = (els.searchInput?.value || els.mobileSearchInput?.value || '').trim();
+  if (q.length < 2) return;
+
+  state.searchQuery = q;
+  state.searchOpen = false;
+  state.searchIndex = -1;
+  els.searchDropdown?.classList.add('hidden');
+
+  if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) {
+    closeMobileSearch();
+  }
+
+  const hasLive = state.searchResults.length > 0 && state._lastAppliedQuery === q;
+  const cached = !hasLive ? Cache.getSearch(q) : null;
+
+  if (cached) {
+    state.searchResults = rankSearchResults(q, cached.items.map(API.normalizeJikanAnime));
+    state._lastAppliedQuery = q;
+  }
+
+  showSearchResultsView(q);
+
+  if (!hasLive && !cached) {
+    if (els.searchResultsGrid) {
+      els.searchResultsGrid.innerHTML = Array(8).fill('<div class="skeleton-card"></div>').join('');
+    }
+    API.searchAnime(q).then(({ items }) => {
+      if (state.searchQuery !== q) return;
+      state.searchResults = rankSearchResults(q, items.map(API.normalizeJikanAnime));
+      state._lastAppliedQuery = q;
+      if (state.searchMode) renderSearchResultsGrid();
+    }).catch(() => {
+      if (state.searchQuery !== q) return;
+      state.searchResults = [];
+      renderSearchResultsGrid();
+    });
+  } else {
+    API.searchAnime(q).then(({ items }) => {
+      if (state.searchQuery !== q) return;
+      state.searchResults = rankSearchResults(q, items.map(API.normalizeJikanAnime));
+      state._lastAppliedQuery = q;
+      if (state.searchMode) renderSearchResultsGrid();
+    }).catch(() => {});
+  }
+
+  els.searchResultsSection?.scrollIntoView({ behavior: 'auto', block: 'start' });
+}
+
 function onSearchKeydown(e) {
-  if (e.key === 'Enter' && state.searchQuery.length >= 2) {
+  if (e.key === 'Enter') {
+    const q = (e.target?.value || els.searchInput?.value || '').trim();
+    if (q.length < 2) return;
     e.preventDefault();
     if (state.searchResults.length && state.searchIndex >= 0) {
       openSearchResult(state.searchResults[state.searchIndex], { autoPlay: true, scrollToPlayer: true });
-    } else if (state.searchResults.length) {
-      if (!isMobileView()) {
-        showSearchResultsView(state.searchQuery);
-        renderSearchResultsGrid();
-      } else {
-        showSearchResultsView(state.searchQuery);
-      }
+      return;
     }
+    submitSearch();
     return;
   }
   if (!state.searchOpen || !state.searchResults.length) return;

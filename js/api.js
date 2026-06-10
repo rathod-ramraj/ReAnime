@@ -93,7 +93,11 @@ const API = {
     const cached = Cache.getHome();
     if (cached) {
       this.fetchJSON('/api/home').then((json) => {
-        Cache.setHome(this.normalizeHomeFeed(json));
+        const result = this.normalizeHomeFeed(json);
+        Cache.setHome(result);
+        if (typeof window.__onHomeFeedUpdate === 'function') {
+          window.__onHomeFeedUpdate(result);
+        }
       }).catch(() => {});
       return cached;
     }
@@ -244,11 +248,22 @@ const API = {
   },
 
   normalizeJikanAnime(item) {
+    const raw = item.raw || item;
+    const titleFields = {
+      title: item.titleRomaji || raw.title || item.title,
+      title_english: item.titleEnglish || raw.title_english || item.title_english,
+      title_japanese: item.altTitle || raw.title_japanese || item.title_japanese,
+      title_synonyms: item.synonyms || raw.title_synonyms || item.title_synonyms,
+    };
     return {
       source: item.source || 'jikan',
       seriesId: item.seriesId || null,
-      title: item.title,
-      altTitle: item.altTitle || item.title_japanese,
+      title: typeof Titles !== 'undefined' ? Titles.buildDisplayTitle(titleFields) : (item.title_english || item.title),
+      titleEnglish: titleFields.title_english || null,
+      titleRomaji: titleFields.title || null,
+      synonyms: titleFields.title_synonyms || [],
+      altTitle: titleFields.title_japanese || null,
+      rating: item.rating || raw.rating || null,
       poster: item.poster || item.images?.jpg?.large_image_url || item.images?.jpg?.image_url,
       year: item.year,
       score: item.score,

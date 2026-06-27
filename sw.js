@@ -1,8 +1,8 @@
 /* AnimeXplore service worker — required for browser install (address bar icon) */
-const CACHE = 'animexplore-shell-v3';
+const CACHE = 'animexplore-shell-v4';
 const SHELL = [
   '/manifest.json',
-  '/favicon.png',
+  '/favicon.png?v=2',
 ];
 
 const NETWORK_FIRST = [

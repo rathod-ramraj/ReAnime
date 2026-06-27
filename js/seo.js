@@ -11,8 +11,8 @@
   if (canonical) canonical.href = pageUrl;
 
   setAbs('ogUrl', '/');
-  setAbs('ogImage', '/favicon.png');
-  setAbs('twitterImage', '/favicon.png');
+  setAbs('ogImage', '/favicon.png?v=2');
+  setAbs('twitterImage', '/favicon.png?v=2');
 
   const schema = document.getElementById('schemaWebSite');
   if (schema) {

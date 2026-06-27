@@ -344,6 +344,7 @@ html.perf-streaming .brand-name { animation: none; }
   pointer-events: none;
   width: 20px !important;
   height: 20px !important;
+  z-index: 2;
   transition: color 300ms var(--ease), transform 300ms var(--ease-smooth);
 }
 
@@ -699,10 +700,10 @@ html.perf-streaming .brand-name { animation: none; }
   height: 100%;
   object-fit: cover;
   object-position: center 20%;
-  filter: brightness(0.45);
-  -webkit-filter: brightness(0.45);
+  filter: brightness(0.7);
+  -webkit-filter: brightness(0.7);
   transform: scale(1.05);
-  opacity: 0.8;
+  opacity: 0.95;
   transition: opacity 0.6s var(--ease-smooth);
 }
 
@@ -725,6 +726,9 @@ html.perf-streaming .brand-name { animation: none; }
   align-items: center;
   padding-top: 100px;
   padding-bottom: 56px;
+  padding-left: max(48px, env(safe-area-inset-left));
+  padding-right: max(48px, env(safe-area-inset-right));
+  width: 100%;
 }
 
 .hero-grid {
@@ -737,25 +741,19 @@ html.perf-streaming .brand-name { animation: none; }
   flex-direction: column;
   justify-content: center;
   gap: 16px;
-  max-width: 650px;
+  max-width: 720px;
 }
 
 .hero-visual {
   display: none !important;
 }
 
-.hero-visual {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 .hero-visual-frame {
   position: relative;
   width: 100%;
-  max-width: 540px;
-  aspect-ratio: 16 / 9;
-  border-radius: var(--r-lg);
+  max-width: 320px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--r-md);
   overflow: hidden;
   box-shadow:
     0 24px 64px rgba(0, 0, 0, 0.55),
@@ -2714,6 +2712,37 @@ html.perf-streaming .brand-name { animation: none; }
   margin-top: 8px;
 }
 
+.telegram-community-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(36, 161, 222, 0.3);
+  background: rgba(36, 161, 222, 0.06);
+  color: var(--text-1);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--dur-fast) var(--ease);
+}
+
+.telegram-community-btn svg {
+  color: #24A1DE;
+  transition: transform var(--dur-fast) var(--ease-smooth);
+}
+
+.telegram-community-btn:hover {
+  background: rgba(36, 161, 222, 0.12);
+  border-color: rgba(36, 161, 222, 0.6);
+  box-shadow: 0 0 16px rgba(36, 161, 222, 0.15);
+  color: var(--text-1);
+}
+
+.telegram-community-btn:hover svg {
+  transform: scale(1.1) rotate(-8deg);
+}
+
 .footer-social .social-link {
   color: #888888;
   transition: color 0.2s ease;
@@ -2798,7 +2827,18 @@ html.perf-streaming .brand-name { animation: none; }
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
   }
-  .search-wrap { display: none; }
+  /* Restored header search for tablet viewports */
+  @media (max-width: 600px) {
+    .search-wrap { display: none; }
+  }
+  @media (min-width: 601px) {
+    .search-wrap {
+      display: flex !important;
+      max-width: 280px;
+      flex-grow: 1;
+    }
+  }
+
   .brand { font-size: 17px; gap: 8px; }
   .brand-icon-img { width: 30px; height: 30px; }
   .brand-name { font-size: 17px; }
@@ -2818,34 +2858,59 @@ html.perf-streaming .brand-name { animation: none; }
   }
   .mobile-browse-bar::-webkit-scrollbar { display: none; }
 
-  /* Home */
-  .hero-spotlight { min-height: auto; margin-bottom: 0; }
-  .hero-inner { padding-top: 20px; padding-bottom: 24px; min-height: auto; }
-  .hero-grid { grid-template-columns: 1fr; gap: 20px; }
-  .hero-visual { order: -1; }
-  .hero-visual-frame { max-width: 200px; margin: 0 auto; border-radius: var(--r-md); }
-  .hero-content { max-width: none; text-align: left; align-items: flex-start; gap: 12px; }
-  .hero-desc { max-width: none; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .hero-actions { width: 100%; }
+  /* Home — Mobile & Tablet Optimizations */
+  .hero-spotlight { min-height: 460px; margin-bottom: 0; }
+  .hero-overlay {
+    background: linear-gradient(0deg, var(--bg) 0%, rgba(5, 5, 10, 0.45) 50%, rgba(5, 5, 10, 0.8) 100%) !important;
+  }
+  .hero-inner { padding-top: 72px; padding-bottom: 24px; min-height: 460px; display: flex; align-items: center; padding-left: 16px; padding-right: 16px; width: 100%; }
+  .hero-grid { grid-template-columns: 1fr; gap: 0; }
+  
+  /* Hide visual on mobile/tablet to avoid duplicate imagery and save screen estate */
+  .hero-visual { display: none !important; }
+  
+  /* Elegant floating glassmorphic spotlight card */
+  .hero-content {
+    max-width: 100%;
+    text-align: left;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(15, 15, 27, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 24px;
+    border-radius: var(--r-md);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  }
+  
+  .hero-desc { max-width: none; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; opacity: 0.85; }
+  .hero-actions { width: 100%; gap: 10px; }
   .hero-actions .btn-watch { flex: 1; justify-content: center; }
-  .hero-actions .btn-detail { flex: 1; text-align: center; }
+  .hero-actions .btn-detail { flex: 1; justify-content: center; }
   .hero-controls { display: none; }
-  .hero-title { font-size: clamp(24px, 6vw, 32px); }
+  .hero-title { font-size: clamp(22px, 5.5vw, 30px); font-weight: 800; line-height: 1.2; }
   .home-section.container-max { padding-left: 16px; padding-right: 16px; }
   .home-section { padding-bottom: 28px; }
 
+  /* Snap scrolling configurations for premium feel */
   .trending-row,
-  .continue-row {
-    gap: 10px;
+  .continue-row,
+  .home-section:not(#searchResultsSection):not(#categorySection) .category-grid {
+    gap: 12px;
     scroll-snap-type: x mandatory;
-    padding-bottom: 4px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
   }
   .trending-row {
     gap: 22px;
     padding: 12px 16px 20px 24px;
   }
   .trending-card,
-  .continue-card { scroll-snap-align: start; }
+  .continue-card,
+  .home-section:not(#searchResultsSection):not(#categorySection) .category-grid .category-card {
+    scroll-snap-align: start;
+  }
   .trending-card { flex: 0 0 120px; height: 175px; }
   .continue-card { flex: 0 0 160px; }
   .trending-arrow { display: none; }

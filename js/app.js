@@ -408,6 +408,25 @@ function bindEvents() {
   els.heroNext?.addEventListener('click', () => stepSpotlight(1));
   els.heroWatch?.addEventListener('click', () => openSpotlightAnime(true));
   els.heroDetail?.addEventListener('click', () => openSpotlightAnime(false));
+
+  // Mobile swipe gestures for spotlight slider
+  let touchStartX = 0;
+  let touchEndX = 0;
+  els.heroSection?.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+  els.heroSection?.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    const diffX = touchEndX - touchStartX;
+    if (Math.abs(diffX) > 50) {
+      if (diffX > 0) {
+        stepSpotlight(-1);
+      } else {
+        stepSpotlight(1);
+      }
+      resetSpotlightAutoplay();
+    }
+  }, { passive: true });
   els.trendingNext?.addEventListener('click', () => {
     els.trendingRow?.scrollBy({ left: 320, behavior: 'smooth' });
   });
@@ -1950,27 +1969,24 @@ function stopPlayer() {
 
 function loadPlayer(url) {
   clearStreamFailTimer();
+  els.playerIframe.onload = null;
   els.playerPlaceholder.classList.remove('hidden');
   setPlayerPlaceholder('Loading…');
   els.playerIframe.classList.add('hidden');
-  els.playerIframe.src = 'about:blank';
 
-  const load = () => {
-    els.playerIframe.onload = () => {
-      clearStreamFailTimer();
-      els.playerIframe.classList.remove('hidden');
-      els.playerPlaceholder.classList.add('hidden');
-      els.playerIframe.onload = null;
-    };
-    els.playerIframe.src = url;
-    state.streamLoadTimer = setTimeout(() => {
-      if (els.playerIframe.classList.contains('hidden')) {
-        switchToNextServer();
-      }
-    }, 7000);
+  els.playerIframe.onload = () => {
+    clearStreamFailTimer();
+    els.playerIframe.classList.remove('hidden');
+    els.playerPlaceholder.classList.add('hidden');
+    els.playerIframe.onload = null;
   };
-
-  setTimeout(load, 120);
+  els.playerIframe.src = url;
+  
+  state.streamLoadTimer = setTimeout(() => {
+    if (els.playerIframe.classList.contains('hidden')) {
+      switchToNextServer();
+    }
+  }, 7000);
 }
 
 function switchToNextServer() {
@@ -2008,7 +2024,7 @@ function pinPlayerOnce() {
   if (!target) return;
   const offset = getHeaderHeight() + 8;
   const top = target.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
 function scrollToDetail() {
@@ -2054,8 +2070,15 @@ function playEpisode(epNum, scrollToPlayerView = true) {
   if (stream && !isMobileView()) state.streamMethod = stream.method;
 
   if (stream?.url) {
-    loadPlayer(stream.url);
+    if (scrollToPlayerView) {
+      setTimeout(() => {
+        loadPlayer(stream.url);
+      }, 350);
+    } else {
+      loadPlayer(stream.url);
+    }
   } else {
+    els.playerIframe.onload = null;
     els.playerIframe.src = 'about:blank';
     els.playerIframe.classList.add('hidden');
     els.playerPlaceholder.classList.remove('hidden');
@@ -2345,22 +2368,30 @@ function initSidebar() {
     });
   });
 
-  // Scroll listener to hide/show sidebar
+  // Scroll listener to hide/show sidebar (throttled using requestAnimationFrame for smooth scrolling)
   let lastScrollTop = 0;
   const siteHeader = document.querySelector('.site-header');
+  let scrollTicking = false;
+
   window.addEventListener('scroll', () => {
-    const st = window.pageYOffset || document.documentElement.scrollTop;
-    if (siteHeader) {
-      siteHeader.classList.toggle('scrolled', st > 20);
+    if (!scrollTicking) {
+      window.requestAnimationFrame(() => {
+        const st = window.pageYOffset || document.documentElement.scrollTop;
+        if (siteHeader) {
+          siteHeader.classList.toggle('scrolled', st > 20);
+        }
+        if (st > lastScrollTop && st > 100) {
+          document.body.classList.add('sidebar-collapsed');
+          sidebar.classList.add('collapsed');
+        } else if (st < lastScrollTop) {
+          document.body.classList.remove('sidebar-collapsed');
+          sidebar.classList.remove('collapsed');
+        }
+        lastScrollTop = st <= 0 ? 0 : st;
+        scrollTicking = false;
+      });
+      scrollTicking = true;
     }
-    if (st > lastScrollTop && st > 100) {
-      document.body.classList.add('sidebar-collapsed');
-      sidebar.classList.add('collapsed');
-    } else if (st < lastScrollTop) {
-      document.body.classList.remove('sidebar-collapsed');
-      sidebar.classList.remove('collapsed');
-    }
-    lastScrollTop = st <= 0 ? 0 : st;
   }, { passive: true });
 }
 

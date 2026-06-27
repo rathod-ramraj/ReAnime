@@ -1065,7 +1065,6 @@ html.perf-streaming .brand-name { animation: none; }
   z-index: 3;
   color: #050505;
   -webkit-text-stroke: 2.5px rgba(255, 255, 255, 0.8);
-  text-stroke: 2.5px rgba(255, 255, 255, 0.8);
   pointer-events: none;
   user-select: none;
 }
@@ -1121,9 +1120,6 @@ html.perf-streaming .brand-name { animation: none; }
   animation: cardIn var(--dur-slow) var(--ease-smooth) both;
 }
 
-.category-card:hover {
-  /* Handled on poster hover */
-}
 
 /* Staggered entry for category grid — mirrors anime-card treatment */
 .category-card:nth-child(1)  { animation-delay: 0.03s; }
@@ -2858,7 +2854,6 @@ html.perf-streaming .brand-name { animation: none; }
     left: -18px;
     bottom: -18px;
     -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.8);
-    text-stroke: 1.5px rgba(255, 255, 255, 0.8);
   }
 
   .category-grid {

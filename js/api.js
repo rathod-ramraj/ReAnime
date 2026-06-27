@@ -6,6 +6,7 @@ const API = {
   ANIMO_CDN: 'https://cdn.4animo.xyz/embed',
 
   STREAM_SERVERS: [
+    { id: 'zencloud', label: 'ZenCloud' },
     { id: 'embed', label: 'MegaPlay HD-1' },
     { id: 'embed-hd2', label: 'MegaPlay HD-2' },
     { id: 'tryembed', label: 'TryEmbed' },
@@ -20,11 +21,12 @@ const API = {
   ],
 
   STREAM_METHOD_ORDER: [
-    'embed', 'embed-hd2', 'tryembed', 'vidnest', 'vidnest-pahe',
+    'zencloud', 'embed', 'embed-hd2', 'tryembed', 'vidnest', 'vidnest-pahe',
     'animo-hd1', 'animo-hd2', 'animo-embed', 'animo-mal', 'ani', 'mal',
   ],
 
   PLAYER_ORIGINS: [
+    'https://zencloud.com',
     'https://megaplay.buzz',
     'https://tryembed.us.cc',
     'https://cdn.4animo.xyz',
@@ -108,10 +110,15 @@ const API = {
     return result;
   },
 
-  buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub', variant = 's-2' }) {
+  buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub', variant = 's-2', zencloudId }) {
     const ep = Number(episode);
     const track = lang === 'dub' ? 'dub' : 'sub';
     const animoQs = 'k=1&autoPlay=1&skipIntro=1&skipOutro=1';
+
+    if (method === 'zencloud' && (zencloudId || embedId)) {
+      const id = zencloudId || embedId;
+      return `https://zencloud.com/v/${id}`;
+    }
 
     if ((method === 'embed' || method === 'embed-hd2') && embedId) {
       const v = method === 'embed-hd2' ? 's-1' : variant;
@@ -150,6 +157,9 @@ const API = {
 
   canUseStreamMethod(method, anime, ep) {
     if (!anime || !ep) return false;
+    if (method === 'zencloud') {
+      return !!(ep.zencloudId || ep.embedId || ep.embedUrl);
+    }
     if (method === 'embed' || method === 'embed-hd2' || method === 'animo-embed') {
       return !!(ep.embedId || ep.embedUrl);
     }

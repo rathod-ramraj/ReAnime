@@ -4,9 +4,9 @@ async function initDesign() {
     const design = await res.json();
     applyDesignPalette(design);
     applyAnimeXploreTheme();
-    document.title = 'Home - AnimeXplore - Watch Anime Online, Free Anime Streaming';
+    document.title = 'Home - ReAnime - Watch Anime Online, Free Anime Streaming';
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = '#050505';
+    if (meta) meta.content = '#000000';
   } catch (e) {
     console.warn('[Design] Could not load Design.json', e);
     applyAnimeXploreTheme();
@@ -17,20 +17,25 @@ function applyAnimeXploreTheme() {
   const root = document.documentElement;
   const theme = {
     '--bg': '#050505',
-    '--surface': 'rgba(255, 255, 255, 0.05)',
-    '--surface-2': 'rgba(255, 255, 255, 0.03)',
-    '--highlight': '#d4a853',
-    '--highlight-soft': '#e8c547',
-    '--accent-purple': '#4a9eff',
-    '--accent-blue': '#3b82f6',
-    '--grad-brand': 'linear-gradient(135deg, #3b82f6, #d4a853)',
-    '--accent-dim': 'rgba(59, 130, 246, 0.1)',
-    '--accent-glow': 'rgba(212, 168, 83, 0.35)',
+    '--surface': '#141821',
+    '--surface-2': '#181C25',
+    '--surface-muted': 'rgba(5, 5, 5, 0.6)',
+    '--surface-raised': '#141821',
+    '--surface-strong': '#181C25',
+    '--highlight': '#9DFF00',
+    '--highlight-soft': '#B8FF45',
+    '--accent-purple': '#7C5CFF',
+    '--accent-blue': '#7C5CFF',
+    '--grad-brand': 'linear-gradient(135deg, #7C5CFF, #9DFF00)',
+    '--accent-dim': 'rgba(124, 92, 255, 0.12)',
+    '--accent-glow': 'rgba(157, 255, 0, 0.35)',
     '--glass-border': 'rgba(255, 255, 255, 0.08)',
     '--glass-border-2': 'rgba(255, 255, 255, 0.05)',
-    '--gold': '#d4a853',
-    '--gold-bright': '#e8c547',
-    '--gold-dim': 'rgba(212, 168, 83, 0.12)',
+    '--gold': '#9DFF00',
+    '--gold-bright': '#B8FF45',
+    '--gold-dim': 'rgba(157, 255, 0, 0.12)',
+    '--text-2': '#B9C0CC',
+    '--text-3': '#7E8696',
   };
   for (const [key, val] of Object.entries(theme)) {
     root.style.setProperty(key, val);

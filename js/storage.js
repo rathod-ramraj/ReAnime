@@ -26,6 +26,11 @@ const UserStore = {
     this._write('history', list.slice(0, 40));
   },
 
+  removeHistory(id) {
+    const list = this.getHistory().filter((h) => String(h.id) !== String(id));
+    this._write('history', list);
+  },
+
   getContinueWatching() {
     return this.getHistory().slice(0, 12);
   },

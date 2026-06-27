@@ -23,6 +23,8 @@ const state = {
   searchMode: false,
   playerScrolled: false,
   streamAttempt: 0,
+  streamChain: [],
+  streamIndex: 0,
   navToken: 0,
   homeRetryCount: 0,
   _playTimer: null,
@@ -42,20 +44,22 @@ const $ = (sel) => document.querySelector(sel);
 const DL_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
 
 function cardDownloadBtn(label) {
-  return `<button type="button" class="card-dl-btn" aria-label="${esc(label)}" title="Download">${DL_ICON}</button>`;
+  return '';
 }
 
 function categoryCardHtml(a, i, extraClass = '') {
-  const meta = [a.type || a.raw?.type || 'Anime', a.year, a.score ? `★ ${a.score}` : ''].filter(Boolean).join(' · ');
+  const typeAndYear = [a.type || a.raw?.type || 'TV', a.year].filter(Boolean).join(' · ');
+  const scoreBadge = a.score ? `<span class="card-rating-badge">★ ${a.score}</span>` : '';
   return `
     <article class="category-card${extraClass ? ` ${extraClass}` : ''}" data-mal="${a.malId || ''}" data-series="${a.seriesId || ''}" data-idx="${i}">
       <div class="category-poster">
         ${imgTag(a.poster, a.title)}
+        ${scoreBadge}
         ${cardDownloadBtn(`Download ${a.title}`)}
       </div>
       <div class="category-info">
         <h3>${esc(a.title)}</h3>
-        <p>${meta}</p>
+        <p>${typeAndYear}</p>
       </div>
     </article>`;
 }
@@ -132,13 +136,12 @@ function bumpNavigation() {
 }
 
 function schedulePlayEpisode(epNum, shouldScroll, token, malId) {
-  const delay = isMobileView() ? 550 : 450;
   state._playTimer = setTimeout(() => {
     state._playTimer = null;
     if (state.navToken !== token) return;
     if (malId != null && state.currentAnime?.malId !== malId) return;
     playEpisode(epNum, shouldScroll);
-  }, delay);
+  }, 10);
 }
 
 function getEpisodeNumbers() {
@@ -263,10 +266,12 @@ const els = {
   continueRow: $('#continueRow'),
   bookmarkBtn: $('#bookmarkBtn'),
   mobileNav: $('#mobileNav'),
-  homePopularSection: $('#homePopularSection'),
-  homePopularGrid: $('#homePopularGrid'),
-  homeAiringSection: $('#homeAiringSection'),
-  homeAiringGrid: $('#homeAiringGrid'),
+  homeLatestSection: $('#homeLatestSection'),
+  homeLatestGrid: $('#homeLatestGrid'),
+  homeNewSection: $('#homeNewSection'),
+  homeNewGrid: $('#homeNewGrid'),
+  homeUpcomingSection: $('#homeUpcomingSection'),
+  homeUpcomingGrid: $('#homeUpcomingGrid'),
   notifyBtn: $('#notifyBtn'),
   notifyPanel: $('#notifyPanel'),
   notifyClose: $('#notifyClose'),
@@ -303,6 +308,7 @@ async function init() {
   initRevealObserver();
   initHeaderMenus();
   initInstallPrompt();
+  initSidebar();
   if (window.DownloadManager) DownloadManager.init();
   window.showToast = showToast;
   bindEvents();
@@ -560,8 +566,9 @@ function showDownloadsView() {
   setNavDownloadsActive(true);
   els.heroSection?.classList.add('hidden');
   els.homeTrendingSection?.classList.add('hidden');
-  els.homePopularSection?.classList.add('hidden');
-  els.homeAiringSection?.classList.add('hidden');
+  els.homeLatestSection?.classList.add('hidden');
+  els.homeNewSection?.classList.add('hidden');
+  els.homeUpcomingSection?.classList.add('hidden');
   els.continueSection?.classList.add('hidden');
   els.categorySection?.classList.add('hidden');
   els.searchResultsSection?.classList.add('hidden');
@@ -616,8 +623,9 @@ function showLibrary() {
   document.querySelectorAll('.nav-cat').forEach((b) => b.classList.remove('active'));
   els.heroSection?.classList.add('hidden');
   els.homeTrendingSection?.classList.add('hidden');
-  els.homePopularSection?.classList.add('hidden');
-  els.homeAiringSection?.classList.add('hidden');
+  els.homeLatestSection?.classList.add('hidden');
+  els.homeNewSection?.classList.add('hidden');
+  els.homeUpcomingSection?.classList.add('hidden');
   els.continueSection?.classList.add('hidden');
   els.categorySection?.classList.remove('hidden');
   els.downloadsSection?.classList.add('hidden');
@@ -664,17 +672,17 @@ function renderContinueWatching() {
   els.continueSection?.classList.remove('hidden');
   window.__observeReveal?.(els.continueSection);
   els.continueRow.innerHTML = items.map((item, i) => {
-    const pct = item.totalEps ? Math.min(100, (item.episode / item.totalEps) * 100) : 30;
     return `
       <article class="continue-card" data-idx="${i}">
         <div class="continue-poster">
           ${imgTag(item.poster, item.title)}
-          ${cardDownloadBtn(`Download ${item.title}`)}
+          <button type="button" class="continue-delete-btn" aria-label="Remove" title="Remove from Continue Watching">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div class="continue-info">
-          <h4>${esc(item.title)}</h4>
           <p>Episode ${item.episode || 1}</p>
-          <div class="continue-bar"><span style="width:${pct}%"></span></div>
+          <h4>${esc(item.title)}</h4>
         </div>
       </article>`;
   }).join('');
@@ -682,12 +690,14 @@ function renderContinueWatching() {
   els.continueRow.querySelectorAll('.continue-card').forEach((card) => {
     const idx = parseInt(card.dataset.idx, 10);
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.card-dl-btn')) return;
+      if (e.target.closest('.continue-delete-btn')) return;
       resumeWatch(items[idx]);
     });
-    card.querySelector('.card-dl-btn')?.addEventListener('click', (e) => {
+    card.querySelector('.continue-delete-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      queueCardDownload(items[idx], items[idx].episode);
+      UserStore.removeHistory(items[idx].id);
+      renderContinueWatching();
+      showToast('Removed from Continue Watching', 'success');
     });
   });
 }
@@ -724,11 +734,18 @@ function toggleBookmarkCurrent() {
 }
 
 function updateBookmarkButton(forced) {
-  if (!els.bookmarkBtn || !state.currentAnime) return;
+  if (!state.currentAnime) return;
   const on = typeof forced === 'boolean' ? forced : UserStore.isBookmarked(UserStore.animeKey(state.currentAnime));
-  els.bookmarkBtn.textContent = on ? '★' : '☆';
-  els.bookmarkBtn.classList.toggle('active', on);
-  els.bookmarkBtn.setAttribute('aria-label', on ? 'Remove bookmark' : 'Bookmark anime');
+  if (els.bookmarkBtn) {
+    els.bookmarkBtn.textContent = on ? '★' : '☆';
+    els.bookmarkBtn.classList.toggle('active', on);
+    els.bookmarkBtn.setAttribute('aria-label', on ? 'Remove bookmark' : 'Bookmark anime');
+  }
+  const btn2 = document.getElementById('detailBookmarkBtn');
+  if (btn2) {
+    btn2.textContent = on ? 'Remove from List' : 'Add to List';
+    btn2.classList.toggle('active', on);
+  }
 }
 
 function saveWatchProgress() {
@@ -769,7 +786,9 @@ function renderRelatedList() {
     const active = state.currentAnime?.seriesId === norm.seriesId ? ' active' : '';
     return `
       <li class="related-item${active}" data-id="${norm.seriesId}">
-        ${imgTag(norm.poster, norm.title)}
+        <div class="related-item-poster">
+          ${imgTag(norm.poster, norm.title)}
+        </div>
         <span class="related-title">${esc(norm.title)}</span>
       </li>`;
   }).join('');
@@ -814,8 +833,9 @@ async function loadHomeData() {
 
   await Promise.all([homePromise, loadTrendingSection()]);
 
-  loadHomeGrid('popular', els.homePopularGrid);
-  loadHomeGrid('airing', els.homeAiringGrid);
+  loadHomeGrid('airing', els.homeLatestGrid);
+  loadHomeGrid('popular', els.homeNewGrid);
+  loadHomeGrid('upcoming', els.homeUpcomingGrid);
 }
 
 async function loadTrendingSection() {
@@ -854,7 +874,7 @@ async function loadTrendingSection() {
   }
 }
 
-const HOME_GRID_LIMIT = 36;
+const HOME_GRID_LIMIT = 8;
 
 async function loadHomeGrid(type, gridEl) {
   if (!gridEl) return;
@@ -898,8 +918,9 @@ function setHomeCategory(cat) {
   els.heroSection?.classList.toggle('hidden', !isHome);
   els.searchResultsSection?.classList.toggle('hidden', !state.searchMode);
   els.homeTrendingSection?.classList.toggle('hidden', !isHome);
-  els.homePopularSection?.classList.toggle('hidden', !isHome);
-  els.homeAiringSection?.classList.toggle('hidden', !isHome);
+  els.homeLatestSection?.classList.toggle('hidden', !isHome);
+  els.homeNewSection?.classList.toggle('hidden', !isHome);
+  els.homeUpcomingSection?.classList.toggle('hidden', !isHome);
   els.continueSection?.classList.toggle('hidden', !isHome || !UserStore.getContinueWatching().length);
   els.categorySection?.classList.toggle('hidden', isHome);
   els.downloadsSection?.classList.add('hidden');
@@ -1012,9 +1033,12 @@ function renderTrending() {
 
   els.trendingRow.innerHTML = items.map((a, i) => `
     <article class="trending-card" data-mal="${a.malId}" data-idx="${i}">
-      ${cardDownloadBtn(`Download ${a.title}`)}
-      <span class="trending-vtitle">${esc(a.title)}</span>
-      ${imgTag(a.poster, a.title)}
+      <span class="trending-number">${i + 1}</span>
+      <div class="trending-poster">
+        ${cardDownloadBtn(`Download ${a.title}`)}
+        <span class="trending-vtitle">${esc(a.title)}</span>
+        ${imgTag(a.poster, a.title)}
+      </div>
     </article>`).join('');
 
   els.trendingRow.querySelectorAll('.trending-card').forEach((card) => {
@@ -1152,8 +1176,9 @@ function restoreHomeSections() {
   const isHome = state.homeCategory === 'home';
   els.heroSection?.classList.toggle('hidden', !isHome);
   els.homeTrendingSection?.classList.toggle('hidden', !isHome);
-  els.homePopularSection?.classList.toggle('hidden', !isHome);
-  els.homeAiringSection?.classList.toggle('hidden', !isHome);
+  els.homeLatestSection?.classList.toggle('hidden', !isHome);
+  els.homeNewSection?.classList.toggle('hidden', !isHome);
+  els.homeUpcomingSection?.classList.toggle('hidden', !isHome);
   els.continueSection?.classList.toggle('hidden', !isHome || !UserStore.getContinueWatching().length);
   els.categorySection?.classList.toggle('hidden', isHome);
   els.downloadsSection?.classList.add('hidden');
@@ -1180,8 +1205,9 @@ function showSearchResultsView(query) {
 
   els.heroSection?.classList.add('hidden');
   els.homeTrendingSection?.classList.add('hidden');
-  els.homePopularSection?.classList.add('hidden');
-  els.homeAiringSection?.classList.add('hidden');
+  els.homeLatestSection?.classList.add('hidden');
+  els.homeNewSection?.classList.add('hidden');
+  els.homeUpcomingSection?.classList.add('hidden');
   els.continueSection?.classList.add('hidden');
   els.categorySection?.classList.add('hidden');
   els.downloadsSection?.classList.add('hidden');
@@ -1364,9 +1390,7 @@ function applyResolvedData(result, opts = {}) {
   state.currentAnime = anime;
   state.episodes = episodes;
   state.currentEpisode = opts.startEpisode || getFirstEpisodeNumber();
-  state.streamMethod = isMobileView()
-    ? API.pickDefaultStreamMethod(anime, findEpisode(state.currentEpisode))
-    : streamMethod;
+  state.streamMethod = API.pickDefaultStreamMethod(anime, findEpisode(state.currentEpisode));
   state.language = anime.hasSub !== false ? 'sub' : 'dub';
   alignEpRangeStart(state.currentEpisode);
   if (els.epLangFilter) {
@@ -1446,6 +1470,19 @@ function renderSeries() {
   const a = state.currentAnime;
   if (!a) return;
 
+  // Render backdrop image
+  const bannerImg = a.bannerImage || a.poster || '';
+  const bannerBg = document.getElementById('seriesBannerBg');
+  if (bannerBg) {
+    bannerBg.style.backgroundImage = bannerImg ? `url(${bannerImg})` : '';
+  }
+
+  // Populate Japanese subtitle
+  const jnameEl = document.getElementById('seriesJName');
+  if (jnameEl) {
+    jnameEl.innerHTML = a.jname ? `<em>${esc(a.jname)}</em>` : '';
+  }
+
   els.seriesPoster.innerHTML = imgTag(a.poster, a.title);
   els.seriesTitle.textContent = a.title;
   if (els.mobileWatchTitle) els.mobileWatchTitle.textContent = a.title;
@@ -1473,6 +1510,40 @@ function renderSeries() {
     metaRow('Score', a.score ? `${a.score} / 10` : '—'),
     metaRow('Genres', (a.genres || []).slice(0, 4).join(', ') || '—'),
   ].join('');
+
+  // Wire new detail actions
+  const watchBtn = document.getElementById('detailWatchBtn');
+  if (watchBtn) {
+    watchBtn.onclick = () => {
+      const activeEpRow = document.querySelector('.ep-row.active') || document.querySelector('.ep-row');
+      if (activeEpRow) {
+        activeEpRow.click();
+      } else {
+        const firstEp = state.episodes[0];
+        if (firstEp) selectEpisode(firstEp.number);
+      }
+      document.getElementById('playerWrap')?.scrollIntoView({ behavior: 'smooth' });
+    };
+  }
+
+  const bookmarkActBtn = document.getElementById('detailBookmarkBtn');
+  if (bookmarkActBtn) {
+    bookmarkActBtn.onclick = () => {
+      toggleBookmarkCurrent();
+    };
+  }
+
+  const shareBtn = document.getElementById('detailShareBtn');
+  if (shareBtn) {
+    shareBtn.onclick = () => {
+      try {
+        navigator.clipboard.writeText(window.location.href);
+        showToast('Link copied to clipboard!', 'success');
+      } catch (_) {
+        showToast('Failed to copy link', 'error');
+      }
+    };
+  }
 
   renderEpRangeSelect();
   renderEpisodeGrid();
@@ -1784,6 +1855,8 @@ function renderServerButtons() {
       btn.addEventListener('click', () => {
         state.language = btn.dataset.lang;
         state.streamMethod = btn.dataset.method;
+        state.streamIndex = 0;
+        state.streamAttempt = 0;
         updateLangButtons();
         renderServerButtons();
         playEpisode(state.currentEpisode, false);
@@ -1812,6 +1885,7 @@ function tryStreamMethod(method, ep, lang) {
     aniId: a.aniId,
     episode: epNum,
     lang,
+    zencloudId: ep.zencloudId,
   });
   if (url) return { url, method };
   return null;
@@ -1860,6 +1934,7 @@ function stopPlayer() {
     state._playTimer = null;
   }
   state.streamAttempt = 0;
+  state.streamIndex = 0;
   const iframe = els.playerIframe;
   if (!iframe) return;
   iframe.onload = null;
@@ -1890,12 +1965,32 @@ function loadPlayer(url) {
     els.playerIframe.src = url;
     state.streamLoadTimer = setTimeout(() => {
       if (els.playerIframe.classList.contains('hidden')) {
-        setPlayerPlaceholder('Stream is slow or blocked — pick another server or tap refresh.');
+        switchToNextServer();
       }
-    }, 12000);
+    }, 7000);
   };
 
   setTimeout(load, 120);
+}
+
+function switchToNextServer() {
+  clearStreamFailTimer();
+  state.streamIndex += 1;
+  state.streamAttempt += 1;
+
+  if (state.streamIndex < state.streamChain.length) {
+    const nextStream = state.streamChain[state.streamIndex];
+    state.streamMethod = nextStream.method;
+    setPlayerPlaceholder(`Server failed. Auto-switching to server ${state.streamIndex + 1}...`);
+    renderServerButtons();
+    updateLangButtons();
+    loadPlayer(nextStream.url);
+  } else {
+    els.playerIframe.src = 'about:blank';
+    els.playerIframe.classList.add('hidden');
+    els.playerPlaceholder.classList.remove('hidden');
+    setPlayerPlaceholder('All servers failed. Please click refresh at the top-right or try another episode.');
+  }
 }
 
 function getHeaderHeight() {
@@ -1950,8 +2045,12 @@ function playEpisode(epNum, scrollToPlayerView = true) {
   if (prevRange !== state.epRangeStart) renderEpRangeSelect();
   else if (els.epRange) els.epRange.value = String(state.epRangeStart);
 
-  const chain = buildStreamChain(ep, state.language, getPreferredStreamMethod(ep));
-  const stream = chain[0] || null;
+  state.streamChain = buildStreamChain(ep, state.language, getPreferredStreamMethod(ep));
+  if (state.streamAttempt === 0) {
+    state.streamIndex = 0;
+  }
+
+  const stream = state.streamChain[state.streamIndex] || null;
   if (stream && !isMobileView()) state.streamMethod = stream.method;
 
   if (stream?.url) {
@@ -2025,6 +2124,12 @@ function showView(view) {
   els.pageRoot?.classList.toggle('home-mode', view === 'home');
 
   if (view === 'home') {
+    const sidebar = document.getElementById('floatingSidebar');
+    if (sidebar) {
+      document.body.classList.remove('sidebar-collapsed');
+      sidebar.classList.remove('collapsed');
+      localStorage.setItem('sidebar_state', 'expanded');
+    }
     updatePageTitle(null);
     document.querySelectorAll('.nav-cat').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.cat === state.homeCategory);
@@ -2196,6 +2301,69 @@ function revealSection(el) {
   window.__observeReveal?.(el);
 }
 
+function initSidebar() {
+  const sidebar = document.getElementById('floatingSidebar');
+  const collapseBtn = document.getElementById('sidebarCollapse');
+  const triggerBtn = document.getElementById('sidebarTrigger');
+  
+  if (!sidebar) return;
+
+  collapseBtn?.addEventListener('click', () => {
+    document.body.classList.add('sidebar-collapsed');
+    sidebar.classList.add('collapsed');
+    localStorage.setItem('sidebar_state', 'collapsed');
+  });
+
+  triggerBtn?.addEventListener('click', () => {
+    document.body.classList.remove('sidebar-collapsed');
+    sidebar.classList.remove('collapsed');
+    localStorage.setItem('sidebar_state', 'expanded');
+  });
+
+  const savedState = localStorage.getItem('sidebar_state');
+  if (savedState === 'collapsed') {
+    document.body.classList.add('sidebar-collapsed');
+    sidebar.classList.add('collapsed');
+  }
+
+  sidebar.querySelectorAll('.sidebar-item').forEach((btn) => {
+    if (btn.id === 'sidebarCollapse') return;
+    
+    btn.addEventListener('click', () => {
+      sidebar.querySelectorAll('.sidebar-item').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      const target = btn.dataset.sidebar;
+      if (target === 'home') {
+        setHomeCategory('home');
+        showView('home');
+      } else if (target === 'search') {
+        openMobileSearch();
+      } else {
+        showToast(`${target.charAt(0).toUpperCase() + target.slice(1)} features coming soon.`, 'info');
+      }
+    });
+  });
+
+  // Scroll listener to hide/show sidebar
+  let lastScrollTop = 0;
+  const siteHeader = document.querySelector('.site-header');
+  window.addEventListener('scroll', () => {
+    const st = window.pageYOffset || document.documentElement.scrollTop;
+    if (siteHeader) {
+      siteHeader.classList.toggle('scrolled', st > 20);
+    }
+    if (st > lastScrollTop && st > 100) {
+      document.body.classList.add('sidebar-collapsed');
+      sidebar.classList.add('collapsed');
+    } else if (st < lastScrollTop) {
+      document.body.classList.remove('sidebar-collapsed');
+      sidebar.classList.remove('collapsed');
+    }
+    lastScrollTop = st <= 0 ? 0 : st;
+  }, { passive: true });
+}
+
 function initHeaderMenus() {
   els.notifyBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2350,11 +2518,47 @@ function initInstallPrompt() {
     if (e.key === 'Escape' && !els.installPrompt?.classList.contains('hidden')) {
       dismissInstallPrompt();
     }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      els.searchInput?.focus();
+    }
   });
+
+
 
   if (isMobileView() && isIosDevice()) {
     scheduleInstallPopup('ios', 4000);
   }
+  initProtection();
+}
+
+function initProtection() {
+  const prevent = (e) => e.preventDefault();
+  document.addEventListener('contextmenu', prevent);
+  document.addEventListener('selectstart', prevent);
+  document.addEventListener('dragstart', prevent);
+  ['copy', 'cut', 'paste'].forEach((event) => document.addEventListener(event, prevent));
+
+  document.addEventListener('keydown', (e) => {
+    if (
+      e.key === 'F12' ||
+      ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') ||
+      (e.ctrlKey && e.shiftKey && ['I', 'C', 'J', 'K', 'U'].includes(e.key)) ||
+      (e.metaKey && e.altKey && ['i', 'j'].includes(e.key.toLowerCase())) ||
+      (e.metaKey && e.shiftKey && ['c', 'i'].includes(e.key.toLowerCase()))
+    ) {
+      e.preventDefault();
+    }
+  });
+
+  setInterval(() => {
+    if (
+      window.outerHeight - window.innerHeight > 150 ||
+      window.outerWidth - window.innerWidth > 150
+    ) {
+      document.body.innerHTML = "<h1 style='color:white;background:black;height:100vh;display:flex;align-items:center;justify-content:center;margin:0;font-family:sans-serif;'>DevTools not allowed</h1>";
+    }
+  }, 1000);
 }
 
 document.addEventListener('DOMContentLoaded', init);

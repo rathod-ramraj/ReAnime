@@ -30,12 +30,12 @@
   if (year) year.textContent = String(new Date().getFullYear());
 
   window.PageTitle = {
-    default: 'Home - AnimeXplore - Watch Anime Online, Free Anime Streaming',
+    default: 'Home - ReAnime - Watch Anime Online, Free Anime Streaming',
     set(animeTitle, episode) {
       if (animeTitle && episode) {
-        document.title = `${animeTitle} · Ep ${episode} — AnimeXplore`;
+        document.title = `${animeTitle} · Ep ${episode} — ReAnime`;
       } else if (animeTitle) {
-        document.title = `${animeTitle} — AnimeXplore`;
+        document.title = `${animeTitle} — ReAnime`;
       } else {
         document.title = this.default;
       }

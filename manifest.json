@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "AnimeXplore — Watch Anime Online",
-  "short_name": "AnimeXplore",
+  "name": "ReAnime — Watch Anime Online",
+  "short_name": "ReAnime",
   "description": "Watch anime online in HD. Trending, movies, TV series, and top airing shows.",
   "start_url": "/",
   "scope": "/",

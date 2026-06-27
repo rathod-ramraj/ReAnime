@@ -559,16 +559,7 @@
                 }
             }, true);
 
-            var dtOpen = false;
-            setInterval(function () {
-                var wDiff = Math.abs(window.outerWidth - window.innerWidth);
-                var hDiff = Math.abs(window.outerHeight - window.innerHeight);
-                var isOpen = wDiff > 160 || hDiff > 160;
-                if (isOpen === dtOpen) return;
-                dtOpen = isOpen;
-                if (dtOpen) { elDtBlock.classList.add('show'); showBlock(); }
-                else { elDtBlock.classList.remove('show'); }
-            }, 3000);
+            // DevTools size checks disabled to prevent false positives in workspace/tabs
         })();
 
         // Basic client-side bot / automation guard (desktop crawlers only)

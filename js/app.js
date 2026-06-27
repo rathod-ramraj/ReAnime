@@ -2551,14 +2551,7 @@ function initProtection() {
     }
   });
 
-  setInterval(() => {
-    if (
-      window.outerHeight - window.innerHeight > 150 ||
-      window.outerWidth - window.innerWidth > 150
-    ) {
-      document.body.innerHTML = "<h1 style='color:white;background:black;height:100vh;display:flex;align-items:center;justify-content:center;margin:0;font-family:sans-serif;'>DevTools not allowed</h1>";
-    }
-  }, 1000);
+  // DevTools window size detection disabled to allow usage in tab
 }
 
 document.addEventListener('DOMContentLoaded', init);

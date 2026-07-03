@@ -316,7 +316,7 @@ async function init() {
   bindEvents();
   renderContinueWatching();
   setHomeCategory('home');
-  showView('home');
+  handleRouting();
   window.addEventListener('message', onPlayerMessage);
   checkServer();
   syncBannerOffset();
@@ -1404,6 +1404,11 @@ function getFirstEpisodeNumber() {
 
 function applyResolvedData(result, opts = {}) {
   const { anime, episodes, streamMethod } = API.applyResolveResult(result);
+  
+  if (!opts.autoPlayEp) {
+    updateHistory(`/${createAnimeSlug(anime)}`);
+  }
+  
   const token = bumpNavigation();
   state.currentAnime = anime;
   state.episodes = episodes;
@@ -2068,6 +2073,10 @@ function playEpisode(epNum, scrollToPlayerView = true) {
 
   state.currentEpisode = Number(ep.number);
 
+  if (state.currentAnime) {
+    updateHistory(`/watch/${createAnimeSlug(state.currentAnime)}?ep=${state.currentEpisode}`);
+  }
+
   const prevRange = state.epRangeStart;
   alignEpRangeStart(state.currentEpisode);
   if (prevRange !== state.epRangeStart) renderEpRangeSelect();
@@ -2155,6 +2164,7 @@ function showSeriesError(msg, retryFn) {
 }
 
 function showView(view) {
+  if (view === 'home') updateHistory('/');
   els.pageRoot?.classList.toggle('series-mode', view === 'series');
   els.pageRoot?.classList.toggle('home-mode', view === 'home');
 
@@ -2596,5 +2606,58 @@ function initProtection() {
 
   // DevTools window size detection disabled to allow usage in tab
 }
+
+// --- URL Routing ---
+state.isPoppingState = false;
+
+function createAnimeSlug(anime) {
+  if (!anime) return '';
+  const title = anime.title || anime.name || 'anime';
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return `${slug}-${anime.malId}`;
+}
+
+function updateHistory(path, replace = false) {
+  if (state.isPoppingState) return;
+  if (window.location.pathname + window.location.search === path) return;
+  if (replace) {
+    history.replaceState(null, '', path);
+  } else {
+    history.pushState(null, '', path);
+  }
+}
+
+function handleRouting() {
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+
+  state.isPoppingState = true;
+  
+  if (path === '/') {
+    showView('home');
+  } else if (path.startsWith('/watch/')) {
+    const parts = path.split('/')[2].split('-');
+    const malId = parseInt(parts[parts.length - 1], 10);
+    const ep = parseInt(params.get('ep') || '1', 10);
+    if (!isNaN(malId)) {
+      openSearchResult({ malId }, { autoPlayEp: ep });
+    } else {
+      showView('home');
+    }
+  } else {
+    const parts = path.substring(1).split('-');
+    const malId = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(malId)) {
+      openSearchResult({ malId });
+    } else {
+      showView('home');
+    }
+  }
+  
+  setTimeout(() => { state.isPoppingState = false; }, 50);
+}
+
+window.addEventListener('popstate', handleRouting);
+// -------------------
 
 document.addEventListener('DOMContentLoaded', init);

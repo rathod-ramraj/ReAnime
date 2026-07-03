@@ -1513,11 +1513,7 @@ function applyResolvedData(result, opts = {}) {
   }
 
   if (!opts.autoPlay) {
-    if (!state.playerScrolled && state.view === 'series') {
-      state.playerScrolled = true;
-      // Delay slightly to let the DOM render before calculating height
-      setTimeout(scrollToDetail, 50);
-    }
+    pinPlayerOnce();
     els.playerPlaceholder?.classList.remove('hidden');
     setPlayerPlaceholder('Click to play episode');
     return;
@@ -2130,11 +2126,8 @@ function getHeaderHeight() {
 function pinPlayerOnce() {
   if (state.playerScrolled || state.view !== 'series') return;
   state.playerScrolled = true;
-  const target = els.playerWrap;
-  if (!target) return;
-  const offset = getHeaderHeight() + 8;
-  const top = target.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  // Use a tiny timeout to ensure display:none is fully cleared
+  setTimeout(scrollToDetail, 50);
 }
 
 function scrollToDetail() {

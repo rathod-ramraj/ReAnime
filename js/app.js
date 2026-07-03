@@ -313,6 +313,7 @@ async function init() {
   initSidebar();
   if (window.DownloadManager) DownloadManager.init();
   window.showToast = showToast;
+  initSearchPlaceholderRotation();
   bindEvents();
   renderContinueWatching();
   setHomeCategory('home');
@@ -347,6 +348,36 @@ async function checkServer() {
     banner.classList.remove('hidden');
   }
   syncBannerOffset();
+}
+
+function initSearchPlaceholderRotation() {
+  const texts = ["Search Anime..", "Search Onepiece..", "ONEPIECE IS REAL !!!"];
+  let wordIndex = 0;
+  let charIndex = 0;
+  let isDeleting = false;
+  
+  function type() {
+    const currentWord = texts[wordIndex];
+    charIndex += isDeleting ? -1 : 1;
+    
+    const textToShow = currentWord.substring(0, charIndex);
+    if (els.searchInput) els.searchInput.placeholder = textToShow || " ";
+    if (els.mobileSearchInput) els.mobileSearchInput.placeholder = textToShow || " ";
+    
+    let speed = isDeleting ? 40 : 80;
+    
+    if (!isDeleting && charIndex === currentWord.length) {
+      speed = 1800;
+      isDeleting = true;
+    } else if (isDeleting && charIndex === 0) {
+      isDeleting = false;
+      wordIndex = (wordIndex + 1) % texts.length;
+      speed = 400;
+    }
+    setTimeout(type, speed);
+  }
+  
+  setTimeout(type, 500);
 }
 
 function bindEvents() {
@@ -494,6 +525,11 @@ function bindEvents() {
   });
 
   els.mobileSearchClose?.addEventListener('click', closeMobileSearch);
+  
+  els.playerPlaceholder?.addEventListener('click', () => {
+    const ep = state.currentEpisode || getFirstEpisodeNumber();
+    if (ep) playEpisode(ep, false);
+  });
 
   els.mobileInfoToggle?.addEventListener('click', toggleMobileDetail);
 
@@ -1422,14 +1458,18 @@ function applyResolvedData(result, opts = {}) {
   renderSeries();
   setMobileDetailCollapsed(isMobileView());
   updatePageTitle(anime.title, null);
-  if (opts.autoPlay === false) {
-    if (opts.startEpisode) {
-      playEpisode(opts.startEpisode, opts.scrollToPlayer !== false);
-    } else {
-      pinPlayerOnce();
-    }
+  if (opts.autoPlayEp) {
+    opts.autoPlay = true;
+    opts.startEpisode = opts.autoPlayEp;
+  }
+
+  if (!opts.autoPlay) {
+    pinPlayerOnce();
+    els.playerPlaceholder?.classList.remove('hidden');
+    setPlayerPlaceholder('Click to play episode');
     return;
   }
+  
   const firstEp = opts.startEpisode || getFirstEpisodeNumber();
   const shouldScroll = opts.scrollToPlayer !== false;
   schedulePlayEpisode(firstEp, shouldScroll, token, anime.malId);

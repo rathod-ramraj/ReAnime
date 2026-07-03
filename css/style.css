@@ -51,8 +51,8 @@
   /* ── Typography ─────────────────────────────────────────── */
   --font-headings: 'Clash Display', 'Outfit', sans-serif;
   --font-cards: 'Satoshi', sans-serif;
-  --font-ui: 'Inter', sans-serif;
-  --font: 'Inter', sans-serif;
+  --font-ui: 'Satoshi', sans-serif;
+  --font: 'Satoshi', sans-serif;
   --font-size-xs: 11px;
   --font-size-sm: 12px;
   --font-size-md: 13px;
@@ -3624,14 +3624,33 @@ html.perf-streaming .brand-name { animation: none; }
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--text-3);
-  font-size: 14px;
+  color: var(--text-1);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.player-placeholder:hover .player-placeholder-icon {
+  background: var(--highlight);
+  color: var(--bg);
+  transform: scale(1.08);
+  opacity: 1;
 }
 
 .player-placeholder-icon {
-  font-size: 48px;
-  opacity: 0.18;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  padding-left: 6px; /* visually center the triangle */
+  opacity: 0.9;
   line-height: 1;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ─── Bookmark button pulse animation on toggle ──────────────────────────── */

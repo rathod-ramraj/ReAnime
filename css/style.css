@@ -3911,6 +3911,10 @@ html.perf-streaming .brand-name { animation: none; }
   body {
     padding-left: 80px;
   }
+  .site-footer {
+    margin-left: -80px;
+    padding-left: 80px;
+  }
 }
 
 /* Sidebar Trigger Handle when collapsed */

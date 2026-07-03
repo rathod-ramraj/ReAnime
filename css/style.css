@@ -1061,7 +1061,7 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .movie-card {
-  flex: 0 0 180px;
+  flex: 0 0 210px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1170,7 +1170,7 @@ html.perf-streaming .brand-name { animation: none; }
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 16px;
 }
 
@@ -1191,7 +1191,7 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .home-section:not(#searchResultsSection):not(#categorySection) .category-grid .category-card {
-  flex: 0 0 180px;
+  flex: 0 0 210px;
 }
 
 .category-card {
@@ -2534,7 +2534,7 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .continue-card {
-  flex: 0 0 180px;
+  flex: 0 0 210px;
   cursor: pointer;
   border-radius: 12px;
   overflow: hidden;

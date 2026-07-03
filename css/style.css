@@ -2,40 +2,40 @@
    Inspired by Zoro.to / AniWatch dark aesthetic */
 :root {
   /* ── Surface & background tokens ─────────────────────────── */
-  --bg: #0c0c0e;
-  --surface: #161618;
-  --surface-2: #1a1a1e;
-  --surface-muted: rgba(12, 12, 14, 0.6);
-  --surface-raised: #161618;
-  --surface-strong: #1e1e22;
+  --bg: #050505;
+  --surface: #0F0F12;
+  --surface-2: #18181B;
+  --surface-muted: rgba(5, 5, 5, 0.6);
+  --surface-raised: #0F0F12;
+  --surface-strong: #18181B;
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-2: rgba(255, 255, 255, 0.04);
 
   /* ── Color tokens ────────────────────────────────────────── */
-  --highlight: #9DFF00;
-  --highlight-soft: #B8FF45;
-  --highlight-dim: rgba(157, 255, 0, 0.12);
-  --highlight-glow: rgba(157, 255, 0, 0.35);
-  --green-2: #22c55e;
-  --green-2-dim: rgba(34, 197, 94, 0.12);
-  --accent-blue: #9DFF00;
+  --highlight: #A3FF12;
+  --highlight-soft: #BFFF3B;
+  --highlight-dim: rgba(163, 255, 18, 0.12);
+  --highlight-glow: rgba(163, 255, 18, 0.35);
+  --green-2: #00BFFF;
+  --green-2-dim: rgba(0, 191, 255, 0.12);
+  --accent-blue: #00BFFF;
   --text-1: #ffffff;
-  --text-2: #a1a1aa;
+  --text-2: #A1A1AA;
   --text-3: #71717a;
-  --text-inverse: #0c0c0e;
+  --text-inverse: #050505;
   --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.7);
   --shadow-glass: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   --blur: blur(20px);
-  --player-bg: #0c0c0e;
-  --success: #22c55e;
+  --player-bg: #050505;
+  --success: #A3FF12;
   --warning: #f59e0b;
   --danger: #ef4444;
 
   /* ── Radius tokens ──────────────────────────────────────── */
-  --r-xs: 4px;
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 12px;
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 24px;
   --r-pill: 999px;
 
   /* ── Spacing scale ──────────────────────────────────────── */
@@ -49,7 +49,10 @@
   --space-8: 32px;
 
   /* ── Typography ─────────────────────────────────────────── */
-  --font: 'Outfit', 'Inter', sans-serif;
+  --font-headings: 'Clash Display', 'Outfit', sans-serif;
+  --font-cards: 'Satoshi', sans-serif;
+  --font-ui: 'Inter', sans-serif;
+  --font: 'Inter', sans-serif;
   --font-size-xs: 11px;
   --font-size-sm: 12px;
   --font-size-md: 13px;
@@ -86,15 +89,15 @@
   --dur-fast: 0.2s;
   --dur-med: 0.35s;
   --dur-slow: 0.5s;
-  --grad-brand: linear-gradient(135deg, #9DFF00, #22c55e);
+  --grad-brand: linear-gradient(135deg, #A3FF12, #00BFFF);
   --accent: var(--highlight);
   --border: var(--glass-border);
   --accent-dim: var(--highlight-dim);
   --accent-glow: var(--highlight-glow);
   --page-top-pad: 0;
-  --gold: #9DFF00;
-  --gold-bright: #B8FF45;
-  --gold-dim: rgba(157, 255, 0, 0.12);
+  --gold: #A3FF12;
+  --gold-bright: #BFFF3B;
+  --gold-dim: rgba(163, 255, 18, 0.12);
   --container-max: 1280px;
   --section-gap: 56px;
 }
@@ -172,8 +175,8 @@ img { display: block; max-width: 100%; }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes heroVisualIn {
-  from { opacity: 0; transform: translateY(16px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; filter: blur(12px); transform: translateY(16px) scale(0.96); letter-spacing: 0.02em; }
+  to { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); letter-spacing: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -825,13 +828,17 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .hero-title {
+  font-family: var(--font-headings);
   font-size: clamp(38px, 6vw, var(--font-size-5xl));
-  font-weight: var(--font-weight-extrabold);
+  font-weight: 800;
   line-height: 1.1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
 }
 
 .hero-meta {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -855,7 +862,9 @@ html.perf-streaming .brand-name { animation: none; }
 .hero-badge.score { color: var(--highlight); }
 
 .hero-desc {
-  font-size: 15px;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 400;
   line-height: 1.7;
   color: var(--text-2);
   max-width: 480px;
@@ -869,12 +878,13 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .btn-watch {
+  font-family: var(--font-ui);
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-6) 28px;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  font-size: 15px;
+  font-weight: 600;
   border-radius: 4px;
   background: #9DFF00;
   color: #0c0c0e;
@@ -972,7 +982,8 @@ html.perf-streaming .brand-name { animation: none; }
 
 .section-title,
 .section-title-gold {
-  font-size: var(--font-size-3xl);
+  font-family: var(--font-headings);
+  font-size: 40px;
   font-weight: var(--font-weight-bold);
   color: var(--text-1);
   margin-bottom: 20px;
@@ -1118,9 +1129,10 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .movie-title {
+  font-family: var(--font-cards);
   margin-top: 16px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 500;
   color: var(--text-1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1292,8 +1304,9 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .category-info h3 {
-  font-size: 13px;
-  font-weight: 700;
+  font-family: var(--font-cards);
+  font-size: 22px;
+  font-weight: 500;
   line-height: 1.35;
   margin-bottom: 4px;
   display: -webkit-box;
@@ -1687,9 +1700,10 @@ html.perf-streaming .brand-name { animation: none; }
 .ep-row.active .ep-num { color: #fff; }
 
 .ep-name {
+  font-family: var(--font-cards);
   flex: 1;
   padding: 14px 8px;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--text-1);
   white-space: nowrap;
@@ -1930,6 +1944,7 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .detail-body h1 {
+  font-family: var(--font-cards);
   font-size: clamp(24px, 4vw, 36px);
   font-weight: 800;
   letter-spacing: -0.8px;
@@ -1971,7 +1986,9 @@ html.perf-streaming .brand-name { animation: none; }
 }
 
 .detail-desc {
-  font-size: 15px;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 16px;
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.75;
   max-width: 800px;

@@ -1513,7 +1513,11 @@ function applyResolvedData(result, opts = {}) {
   }
 
   if (!opts.autoPlay) {
-    pinPlayerOnce();
+    if (!state.playerScrolled && state.view === 'series') {
+      state.playerScrolled = true;
+      // Delay slightly to let the DOM render before calculating height
+      setTimeout(scrollToDetail, 50);
+    }
     els.playerPlaceholder?.classList.remove('hidden');
     setPlayerPlaceholder('Click to play episode');
     return;

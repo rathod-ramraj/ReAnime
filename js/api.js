@@ -6,23 +6,24 @@ const API = {
   ANIMO_CDN: 'https://cdn.4animo.xyz/embed',
 
   STREAM_SERVERS: [
-    { id: 'zencloud', label: 'ZenCloud' },
-    { id: 'embed', label: 'MegaPlay HD-1' },
-    { id: 'embed-hd2', label: 'MegaPlay HD-2' },
-    { id: 'tryembed', label: 'TryEmbed' },
-    { id: 'vidnest', label: 'VidNest' },
-    { id: 'vidnest-pahe', label: 'VidNest Pahe' },
-    { id: 'animo-hd1', label: '4Animo HD-1' },
-    { id: 'animo-hd2', label: '4Animo HD-2' },
-    { id: 'animo-embed', label: '4Animo Embed' },
-    { id: 'animo-mal', label: '4Animo MAL' },
-    { id: 'ani', label: 'MegaPlay Ani' },
-    { id: 'mal', label: 'MegaPlay MAL' },
+    { id: 'tryembed',     label: 'Reanime 1' },
+    { id: 'embed',        label: 'Reanime 2' },
+    { id: 'embed-hd2',    label: 'Reanime 3' },
+    { id: 'ani',          label: 'Reanime 4' },
+    { id: 'mal',          label: 'Reanime 5' },
+    { id: 'zencloud',     label: 'Reanime 6' },
+    { id: 'vidnest',      label: 'Reanime 7' },
+    { id: 'vidnest-pahe', label: 'Reanime 8' },
+    { id: 'animo-hd1',    label: 'Reanime 9' },
+    { id: 'animo-hd2',    label: 'Reanime 10' },
+    { id: 'animo-embed',  label: 'Reanime 11' },
+    { id: 'animo-mal',    label: 'Reanime 12' },
   ],
 
   STREAM_METHOD_ORDER: [
-    'zencloud', 'embed', 'embed-hd2', 'tryembed', 'vidnest', 'vidnest-pahe',
-    'animo-hd1', 'animo-hd2', 'animo-embed', 'animo-mal', 'ani', 'mal',
+    'tryembed', 'embed', 'embed-hd2', 'ani', 'mal',
+    'zencloud', 'vidnest', 'vidnest-pahe',
+    'animo-hd1', 'animo-hd2', 'animo-embed', 'animo-mal',
   ],
 
   PLAYER_ORIGINS: [
@@ -112,7 +113,7 @@ const API = {
 
   buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub', variant = 's-2', zencloudId }) {
     const ep = Number(episode);
-    const track = lang === 'dub' ? 'dub' : 'sub';
+    const track = lang === 'dub' ? 'dub' : lang === 'hindi' ? 'hindi' : 'sub';
     const animoQs = 'k=1&autoPlay=1&skipIntro=1&skipOutro=1';
 
     if (method === 'zencloud' && (zencloudId || embedId)) {

@@ -6,7 +6,7 @@ async function initDesign() {
     applyAnimeXploreTheme();
     document.title = 'Home - ReAnime - Watch Anime Online, Free Anime Streaming';
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = '#000000';
+    if (meta) meta.content = '#0c0c0e';
   } catch (e) {
     console.warn('[Design] Could not load Design.json', e);
     applyAnimeXploreTheme();
@@ -16,26 +16,27 @@ async function initDesign() {
 function applyAnimeXploreTheme() {
   const root = document.documentElement;
   const theme = {
-    '--bg': '#050505',
-    '--surface': '#141821',
-    '--surface-2': '#181C25',
-    '--surface-muted': 'rgba(5, 5, 5, 0.6)',
-    '--surface-raised': '#141821',
-    '--surface-strong': '#181C25',
+    '--bg': '#0c0c0e',
+    '--surface': '#161618',
+    '--surface-2': '#1a1a1e',
+    '--surface-muted': 'rgba(12, 12, 14, 0.6)',
+    '--surface-raised': '#161618',
+    '--surface-strong': '#1e1e22',
     '--highlight': '#9DFF00',
     '--highlight-soft': '#B8FF45',
-    '--accent-purple': '#7C5CFF',
-    '--accent-blue': '#7C5CFF',
-    '--grad-brand': 'linear-gradient(135deg, #7C5CFF, #9DFF00)',
-    '--accent-dim': 'rgba(124, 92, 255, 0.12)',
+    '--highlight-dim': 'rgba(157, 255, 0, 0.12)',
+    '--highlight-glow': 'rgba(157, 255, 0, 0.35)',
+    '--accent-blue': '#9DFF00',
+    '--grad-brand': 'linear-gradient(135deg, #9DFF00, #22c55e)',
+    '--accent-dim': 'rgba(157, 255, 0, 0.12)',
     '--accent-glow': 'rgba(157, 255, 0, 0.35)',
     '--glass-border': 'rgba(255, 255, 255, 0.08)',
     '--glass-border-2': 'rgba(255, 255, 255, 0.05)',
     '--gold': '#9DFF00',
     '--gold-bright': '#B8FF45',
     '--gold-dim': 'rgba(157, 255, 0, 0.12)',
-    '--text-2': '#B9C0CC',
-    '--text-3': '#7E8696',
+    '--text-2': '#a1a1aa',
+    '--text-3': '#71717a',
   };
   for (const [key, val] of Object.entries(theme)) {
     root.style.setProperty(key, val);

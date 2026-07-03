@@ -865,22 +865,25 @@ async function loadTrendingSection() {
   }
 
   try {
-    const [airing, popular] = await Promise.all([
+    const [airing1, popular1, airing2] = await Promise.all([
       API.getBrowse('airing', 1),
       API.getBrowse('popular', 1),
+      API.getBrowse('airing', 2),
     ]);
     const seen = new Set();
     const merged = [];
-    for (const list of [airing.items, popular.items]) {
+    for (const list of [airing1.items, popular1.items, airing2.items]) {
       for (const a of list || []) {
         const id = a.malId;
         if (!id || seen.has(id)) continue;
         seen.add(id);
         merged.push(a);
+        if (merged.length >= 10) break;
       }
+      if (merged.length >= 10) break;
     }
     if (merged.length) {
-      state.trendingItems = merged.slice(0, HOME_GRID_LIMIT);
+      state.trendingItems = merged.slice(0, 10);
       renderTrending();
       revealSection(els.homeTrendingSection);
     } else if (!state.trendingItems.length) {
@@ -893,7 +896,7 @@ async function loadTrendingSection() {
   }
 }
 
-const HOME_GRID_LIMIT = 8;
+const HOME_GRID_LIMIT = 10;
 
 async function loadHomeGrid(type, gridEl) {
   if (!gridEl) return;
@@ -1044,23 +1047,25 @@ function renderHeroDots(total, activeIdx) {
 
 function renderTrending() {
   if (!els.trendingRow) return;
-  const items = state.trendingItems.slice(0, HOME_GRID_LIMIT);
+  const items = state.trendingItems.slice(0, 10);
   if (!items.length) {
     els.trendingRow.innerHTML = '<div class="empty-state">No trending anime</div>';
     return;
   }
 
   els.trendingRow.innerHTML = items.map((a, i) => `
-    <article class="trending-card" data-mal="${a.malId}" data-idx="${i}">
-      <span class="trending-number">${i + 1}</span>
-      <div class="trending-poster">
-        ${cardDownloadBtn(`Download ${a.title}`)}
-        <span class="trending-vtitle">${esc(a.title)}</span>
-        ${imgTag(a.poster, a.title)}
+    <article class="movie-card" data-mal="${a.malId}" data-idx="${i}">
+      <div class="card-inner">
+        <span class="rank-number">${i + 1}</span>
+        <div class="poster-wrap">
+          ${cardDownloadBtn(`Download ${a.title}`)}
+          ${imgTag(a.poster, a.title)}
+        </div>
       </div>
+      <h3 class="movie-title">${esc(a.title)}</h3>
     </article>`).join('');
 
-  els.trendingRow.querySelectorAll('.trending-card').forEach((card) => {
+  els.trendingRow.querySelectorAll('.movie-card').forEach((card) => {
     const idx = parseInt(card.dataset.idx, 10);
     card.addEventListener('click', (e) => {
       if (e.target.closest('.card-dl-btn')) return;
@@ -1918,10 +1923,23 @@ function buildStreamChain(ep, lang, preferred) {
   const seen = new Set();
 
   for (const m of methods) {
-    const hit = tryStreamMethod(m, ep, lang);
-    if (hit?.url && !seen.has(hit.url)) {
-      seen.add(hit.url);
-      chain.push(hit);
+    if ((m === 'vidnest' || m === 'vidnest-pahe') && lang === 'dub') {
+      const hitDub = tryStreamMethod(m, ep, 'dub');
+      if (hitDub?.url && !seen.has(hitDub.url)) {
+        seen.add(hitDub.url);
+        chain.push(hitDub);
+      }
+      const hitHindi = tryStreamMethod(m, ep, 'hindi');
+      if (hitHindi?.url && !seen.has(hitHindi.url)) {
+        seen.add(hitHindi.url);
+        chain.push(hitHindi);
+      }
+    } else {
+      const hit = tryStreamMethod(m, ep, lang);
+      if (hit?.url && !seen.has(hit.url)) {
+        seen.add(hit.url);
+        chain.push(hit);
+      }
     }
   }
   return chain;

@@ -9,7 +9,7 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 
 function buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub' }) {
   const ep = Number(episode);
-  const track = lang === 'dub' ? 'dub' : 'sub';
+  const track = lang === 'dub' ? 'dub' : lang === 'hindi' ? 'hindi' : 'sub';
 
   if ((method === 'embed' || method === 'embed-hd2') && embedId) {
     const v = method === 'embed-hd2' ? 's-1' : 's-2';
@@ -39,8 +39,9 @@ function buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub' }
 }
 
 const STREAM_METHOD_ORDER = [
-  'embed', 'embed-hd2', 'tryembed', 'vidnest', 'vidnest-pahe',
-  'animo-hd1', 'animo-hd2', 'animo-embed', 'animo-mal', 'ani', 'mal',
+  'tryembed', 'embed', 'embed-hd2', 'ani', 'mal',
+  'zencloud', 'vidnest', 'vidnest-pahe',
+  'animo-hd1', 'animo-hd2', 'animo-embed', 'animo-mal',
 ];
 
 function buildStreamUrls({ method, embedId, malId, aniId, episode, lang = 'sub' }) {
@@ -52,7 +53,12 @@ function buildStreamUrls({ method, embedId, malId, aniId, episode, lang = 'sub' 
     : STREAM_METHOD_ORDER;
 
   for (const m of order) {
-    add(buildStreamUrl({ method: m, embedId, malId, aniId, episode, lang }), m);
+    if ((m === 'vidnest' || m === 'vidnest-pahe') && lang === 'dub') {
+      add(buildStreamUrl({ method: m, embedId, malId, aniId, episode, lang: 'dub' }), m);
+      add(buildStreamUrl({ method: m, embedId, malId, aniId, episode, lang: 'hindi' }), m);
+    } else {
+      add(buildStreamUrl({ method: m, embedId, malId, aniId, episode, lang }), m);
+    }
   }
 
   const seen = new Set();

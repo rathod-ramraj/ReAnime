@@ -557,6 +557,9 @@ function createResolver({ cache, upstream }) {
         getAniListByMalId(malId).catch(() => null),
       ]);
 
+      const aniId = aniMedia?.id || null;
+      enriched.aniId = aniId;
+
       if (seriesId) {
         try {
           const series = await getSeries(seriesId);
@@ -574,9 +577,7 @@ function createResolver({ cache, upstream }) {
       }
 
       if (!episodes.length) {
-        const aniId = aniMedia?.id || null;
         if (aniMedia?.episodes) enriched.episodes = aniMedia.episodes;
-        enriched.aniId = aniId;
         const epCount = enriched.episodes || details.episodes || 12;
         episodes = buildEpisodesFromCount(epCount);
         streamMethod = aniId ? 'ani' : 'mal';

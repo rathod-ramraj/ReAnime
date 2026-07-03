@@ -454,6 +454,7 @@ function bindEvents() {
   
   els.heroSection?.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.target.closest('button') || e.target.closest('a')) return;
     heroPtrIsDragging = true;
     heroPtrStartX = e.clientX;
     els.heroSection.setPointerCapture(e.pointerId);

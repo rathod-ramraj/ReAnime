@@ -726,6 +726,31 @@ function renderLibraryGrid() {
   }, (item) => item.episode);
 }
 
+function explodeCardToPieces(card) {
+  const poster = card.querySelector('.continue-poster');
+  const info = card.querySelector('.continue-info');
+  if (poster) poster.style.visibility = 'hidden';
+  if (info) info.style.visibility = 'hidden';
+
+  card.style.background = 'transparent';
+  card.style.boxShadow = 'none';
+  card.style.border = 'none';
+  
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = 'shatter-particle';
+    const tx = (Math.random() - 0.5) * 200;
+    const ty = (Math.random() - 0.2) * 250 + 100;
+    p.style.setProperty('--tx', `${tx}px`);
+    p.style.setProperty('--ty', `${ty}px`);
+    p.style.left = `50%`;
+    p.style.top = `50%`;
+    const dur = 0.5 + Math.random() * 0.3;
+    p.style.animation = `shatterPiece ${dur}s forwards cubic-bezier(0.25, 1, 0.5, 1)`;
+    card.appendChild(p);
+  }
+}
+
 function renderContinueWatching() {
   const items = UserStore.getContinueWatching();
   if (!items.length) {
@@ -758,12 +783,12 @@ function renderContinueWatching() {
     });
     card.querySelector('.continue-delete-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      card.classList.add('exploding');
+      explodeCardToPieces(card);
       setTimeout(() => {
         UserStore.removeHistory(items[idx].id);
         renderContinueWatching();
         showToast('Removed from Continue Watching', 'success');
-      }, 300);
+      }, 600);
     });
   });
 }

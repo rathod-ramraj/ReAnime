@@ -4017,13 +4017,18 @@ img {
   pointer-events: none;
 }
 
-@keyframes explodeOut {
-  0% { transform: scale(1); opacity: 1; filter: brightness(1); }
-  50% { transform: scale(1.15); filter: brightness(1.8); }
-  100% { transform: scale(0.5); opacity: 0; filter: brightness(0); }
+@keyframes shatterPiece {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
 }
 
-.continue-card.exploding {
-  animation: explodeOut 0.3s forwards cubic-bezier(0.4, 0, 0.2, 1);
+.shatter-particle {
+  position: absolute;
+  background: #fff;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
   pointer-events: none;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  z-index: 100;
 }

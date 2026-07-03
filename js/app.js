@@ -1045,7 +1045,7 @@ function setHeroImage(imgEl, poster, title) {
   imgEl.style.opacity = src ? '1' : '0';
 }
 
-function renderSpotlight() {
+function renderSpotlight(dir = 1) {
   const items = state.spotlightItems;
   if (!items.length) return;
 
@@ -1057,12 +1057,20 @@ function renderSpotlight() {
   setHeroImage(els.heroVisualImg, a.poster, a.title);
   if (els.heroBg) els.heroBg.style.backgroundImage = 'none';
 
-  // Re-trigger visual entrance on slide change
-  const frame = document.querySelector('.hero-visual-frame');
-  if (frame) {
-    frame.style.animation = 'none';
-    requestAnimationFrame(() => { frame.style.animation = ''; });
-  }
+  // Apply slide animation based on direction
+  const heroContent = document.querySelector('.hero-content');
+  const heroVisual = document.querySelector('.hero-visual-frame');
+  const xStart = dir > 0 ? '60px' : '-60px';
+  
+  [heroContent, heroVisual].forEach((el) => {
+    if (el) {
+      el.style.animation = 'none';
+      el.style.setProperty('--slide-x', xStart);
+      requestAnimationFrame(() => {
+        el.style.animation = 'heroSlideAnim 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
+      });
+    }
+  });
   if (els.heroRank) els.heroRank.textContent = `#${idx + 1} Spotlight`;
   if (els.heroTitle) els.heroTitle.textContent = a.title || '—';
   if (els.heroDesc) {
@@ -1170,7 +1178,7 @@ function renderCategoryGrid() {
 function stepSpotlight(dir) {
   if (!state.spotlightItems.length) return;
   state.spotlightIndex += dir;
-  renderSpotlight();
+  renderSpotlight(dir);
   resetSpotlightAutoplay();
 }
 

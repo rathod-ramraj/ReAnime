@@ -1,5 +1,7 @@
 # AnimeXplore
 
+![AnimeXplore Preview](./preview-image.png)
+
 Anime streaming web app with cached search, fast ID resolution, and MegaPlay embeds.
 
 ## Features

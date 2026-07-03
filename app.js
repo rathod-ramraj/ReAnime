@@ -112,7 +112,7 @@ function createApp() {
 
   app.get('/api/browse', async (req, res) => {
     const type = (req.query.type || 'airing').toLowerCase();
-    const allowed = ['airing', 'popular', 'movies', 'tv', 'trending', 'spotlight', 'upcoming'];
+    const allowed = ['airing', 'popular', 'movies', 'tv', 'trending', 'spotlight', 'upcoming', 'favorite', 'completed'];
     if (!allowed.includes(type)) {
       return res.status(400).json({ ok: false, error: 'Invalid browse type' });
     }

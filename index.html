@@ -272,6 +272,49 @@
                 </div>
 
                 <div id="seriesInfo">
+                    <!-- Series detail (anikoto info page style) -->
+                    <div class="detail-panel glass-card mobile-collapsed" id="detailPanel">
+                        <button type="button" class="mobile-info-toggle" id="mobileInfoToggle" aria-expanded="false">
+                            Show anime info ▾
+                        </button>
+                        <div class="detail-main">
+                            <div class="detail-poster" id="seriesPoster"></div>
+                             <div class="detail-body">
+                                 <div class="detail-title-row">
+                                     <div class="title-meta-wrap">
+                                         <h1 id="seriesTitle">—</h1>
+                                         <h2 id="seriesJName" class="series-jname">—</h2>
+                                     </div>
+                                     <button class="btn-bookmark" id="bookmarkBtn" type="button" title="Bookmark" aria-label="Bookmark anime">☆</button>
+                                 </div>
+                                 <div class="detail-tags" id="seriesBadges"></div>
+                                 <p class="detail-desc" id="seriesDesc"></p>
+                                 <button class="read-more hidden" id="readMore">Read more</button>
+                                 
+                                 <div class="detail-actions">
+                                     <button type="button" class="btn-primary btn-watch" id="detailWatchBtn">Watch Now</button>
+                                     <button class="btn-secondary btn-bookmark-act" id="detailBookmarkBtn" type="button">Add to List</button>
+                                     <button type="button" class="btn-secondary btn-share" id="detailShareBtn">Share</button>
+                                 </div>
+                                 
+                                 <div class="meta-grid" id="metaGrid"></div>
+                             </div>
+                            <div class="rating-card" id="ratingCard">
+                                <div class="rating-score" id="ratingScore">—</div>
+                                <div class="rating-stars" id="ratingStars"></div>
+                                <p class="rating-hint">What do you think about this anime?</p>
+                            </div>
+                        </div>
+
+                        <div class="franchise-section hidden" id="franchiseSection">
+                            <h3 class="franchise-heading s-label">Seasons &amp; Movies</h3>
+                            <div class="franchise-scroll">
+                                <div class="franchise-track" id="franchiseTrack"></div>
+                            </div>
+                            <div class="franchise-dots" id="franchiseDots"></div>
+                        </div>
+                    </div>
+
                     <!-- Watch zone: player first (anikoto style) -->
                     <div class="watch-zone glass-panel" id="playerWrap">
                         <div class="player-sticky">
@@ -347,49 +390,6 @@
                         <div class="episodes-download-bar">
                             <button type="button" class="tool-btn" id="downloadAllBtn">Download all episodes</button>
                             <button type="button" class="tool-btn" id="openDownloadsBtn">View downloads</button>
-                        </div>
-                    </div>
-
-                    <!-- Series detail (anikoto info page style) -->
-                    <div class="detail-panel glass-card mobile-collapsed" id="detailPanel">
-                        <button type="button" class="mobile-info-toggle" id="mobileInfoToggle" aria-expanded="false">
-                            Show anime info ▾
-                        </button>
-                        <div class="detail-main">
-                            <div class="detail-poster" id="seriesPoster"></div>
-                             <div class="detail-body">
-                                 <div class="detail-title-row">
-                                     <div class="title-meta-wrap">
-                                         <h1 id="seriesTitle">—</h1>
-                                         <h2 id="seriesJName" class="series-jname">—</h2>
-                                     </div>
-                                     <button class="btn-bookmark" id="bookmarkBtn" type="button" title="Bookmark" aria-label="Bookmark anime">☆</button>
-                                 </div>
-                                 <div class="detail-tags" id="seriesBadges"></div>
-                                 <p class="detail-desc" id="seriesDesc"></p>
-                                 <button class="read-more hidden" id="readMore">Read more</button>
-                                 
-                                 <div class="detail-actions">
-                                     <button type="button" class="btn-primary btn-watch" id="detailWatchBtn">Watch Now</button>
-                                     <button class="btn-secondary btn-bookmark-act" id="detailBookmarkBtn" type="button">Add to List</button>
-                                     <button type="button" class="btn-secondary btn-share" id="detailShareBtn">Share</button>
-                                 </div>
-                                 
-                                 <div class="meta-grid" id="metaGrid"></div>
-                             </div>
-                            <div class="rating-card" id="ratingCard">
-                                <div class="rating-score" id="ratingScore">—</div>
-                                <div class="rating-stars" id="ratingStars"></div>
-                                <p class="rating-hint">What do you think about this anime?</p>
-                            </div>
-                        </div>
-
-                        <div class="franchise-section hidden" id="franchiseSection">
-                            <h3 class="franchise-heading s-label">Seasons &amp; Movies</h3>
-                            <div class="franchise-scroll">
-                                <div class="franchise-track" id="franchiseTrack"></div>
-                            </div>
-                            <div class="franchise-dots" id="franchiseDots"></div>
                         </div>
                     </div>
                 </div>

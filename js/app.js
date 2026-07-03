@@ -758,9 +758,12 @@ function renderContinueWatching() {
     });
     card.querySelector('.continue-delete-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      UserStore.removeHistory(items[idx].id);
-      renderContinueWatching();
-      showToast('Removed from Continue Watching', 'success');
+      card.classList.add('exploding');
+      setTimeout(() => {
+        UserStore.removeHistory(items[idx].id);
+        renderContinueWatching();
+        showToast('Removed from Continue Watching', 'success');
+      }, 300);
     });
   });
 }

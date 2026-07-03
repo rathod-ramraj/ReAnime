@@ -4017,3 +4017,13 @@ img {
   pointer-events: none;
 }
 
+@keyframes explodeOut {
+  0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+  50% { transform: scale(1.15); filter: brightness(1.8); }
+  100% { transform: scale(0.5); opacity: 0; filter: brightness(0); }
+}
+
+.continue-card.exploding {
+  animation: explodeOut 0.3s forwards cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}

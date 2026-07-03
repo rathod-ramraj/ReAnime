@@ -1131,7 +1131,7 @@ html.perf-streaming .brand-name { animation: none; }
 .movie-title {
   font-family: var(--font-cards);
   margin-top: 16px;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 500;
   color: var(--text-1);
   overflow: hidden;
@@ -1140,8 +1140,8 @@ html.perf-streaming .brand-name { animation: none; }
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.4;
-  height: 40px;
+  line-height: 1.3;
+  min-height: 2.6em;
   word-break: break-word;
   white-space: normal;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -3265,7 +3265,7 @@ html.perf-streaming .brand-name { animation: none; }
   .movie-card { flex: 0 0 110px; }
   .card-inner { height: 160px; }
   .rank-number { font-size: 72px; left: -16px; bottom: -8px; -webkit-text-stroke: 1.5px var(--highlight); }
-  .movie-title { font-size: 11px; margin-top: 8px; height: 30px; }
+  .movie-title { font-size: 14px; margin-top: 8px; min-height: 2.6em; height: auto; }
 
   /* Episode list — smaller boxes on small phones */
   .ep-row { min-width: 40px; min-height: 40px; width: 40px; height: 40px; border-radius: 6px; }

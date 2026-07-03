@@ -266,12 +266,14 @@ const els = {
   continueRow: $('#continueRow'),
   bookmarkBtn: $('#bookmarkBtn'),
   mobileNav: $('#mobileNav'),
-  homeLatestSection: $('#homeLatestSection'),
-  homeLatestGrid: $('#homeLatestGrid'),
-  homeNewSection: $('#homeNewSection'),
-  homeNewGrid: $('#homeNewGrid'),
-  homeUpcomingSection: $('#homeUpcomingSection'),
-  homeUpcomingGrid: $('#homeUpcomingGrid'),
+  homeAiringSection: $('#homeAiringSection'),
+  homeAiringGrid: $('#homeAiringGrid'),
+  homePopularSection: $('#homePopularSection'),
+  homePopularGrid: $('#homePopularGrid'),
+  homeFavoriteSection: $('#homeFavoriteSection'),
+  homeFavoriteGrid: $('#homeFavoriteGrid'),
+  homeCompletedSection: $('#homeCompletedSection'),
+  homeCompletedGrid: $('#homeCompletedGrid'),
   notifyBtn: $('#notifyBtn'),
   notifyPanel: $('#notifyPanel'),
   notifyClose: $('#notifyClose'),
@@ -858,9 +860,10 @@ async function loadHomeData() {
 
   await Promise.all([homePromise, loadTrendingSection()]);
 
-  loadHomeGrid('airing', els.homeLatestGrid);
-  loadHomeGrid('popular', els.homeNewGrid);
-  loadHomeGrid('upcoming', els.homeUpcomingGrid);
+  loadHomeGrid('airing', els.homeAiringGrid);
+  loadHomeGrid('popular', els.homePopularGrid);
+  loadHomeGrid('favorite', els.homeFavoriteGrid);
+  loadHomeGrid('completed', els.homeCompletedGrid);
 }
 
 async function loadTrendingSection() {

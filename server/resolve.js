@@ -296,6 +296,8 @@ function createResolver({ cache, upstream }) {
       trending: `/top/anime?filter=bypopularity&page=${page}&limit=${limit}`,
       spotlight: `/top/anime?filter=airing&page=${page}&limit=8`,
       upcoming: `/top/anime?filter=upcoming&page=${page}&limit=${limit}`,
+      favorite: `/top/anime?filter=favorite&page=${page}&limit=${limit}`,
+      completed: `/top/anime?filter=bypopularity&status=complete&page=${page}&limit=${limit}`,
     };
     const path = paths[type] || paths.airing;
     const key = `browse:${type}:${page}`;
@@ -324,6 +326,11 @@ function createResolver({ cache, upstream }) {
         status = 'NOT_YET_RELEASED';
       } else if (type === 'trending') {
         sort = 'TRENDING_DESC';
+      } else if (type === 'favorite') {
+        sort = 'FAVORITES_DESC';
+      } else if (type === 'completed') {
+        sort = 'END_DATE_DESC';
+        status = 'FINISHED';
       } else if (type === 'movies') {
         format = 'MOVIE';
       } else if (type === 'tv') {

@@ -3957,13 +3957,9 @@ body.sidebar-collapsed .sidebar-trigger {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
   z-index: 10;
-}
-
-.continue-card:hover .continue-delete-btn {
-  opacity: 1;
 }
 
 .continue-delete-btn:hover {

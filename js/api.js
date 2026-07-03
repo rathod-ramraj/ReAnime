@@ -111,6 +111,32 @@ const API = {
     return result;
   },
 
+  async getTrending(limit = 10) {
+    const key = `trending:${limit}`;
+    const cached = Cache.getBrowse(key);
+    if (cached) {
+      this.fetchJSON(`/api/trending?limit=${limit}`).then((result) => {
+        const normalized = {
+          items: (result.items || []).map((item) => this.normalizeJikanAnime(item)),
+          source: result.source || 'unknown',
+        };
+        Cache.setBrowse(key, normalized);
+        if (typeof window.__onTrendingUpdate === 'function') {
+          window.__onTrendingUpdate(normalized);
+        }
+      }).catch(() => {});
+      return cached;
+    }
+
+    const result = await this.fetchJSON(`/api/trending?limit=${limit}`);
+    const normalized = {
+      items: (result.items || []).map((item) => this.normalizeJikanAnime(item)),
+      source: result.source || 'unknown',
+    };
+    Cache.setBrowse(key, normalized);
+    return normalized;
+  },
+
   buildStreamUrl({ method, embedId, malId, aniId, episode, lang = 'sub', variant = 's-2', zencloudId }) {
     const ep = Number(episode);
     const track = lang === 'dub' ? 'dub' : lang === 'hindi' ? 'hindi' : 'sub';

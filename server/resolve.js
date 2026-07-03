@@ -613,11 +613,80 @@ function createResolver({ cache, upstream }) {
     await Promise.all(Array.from({ length: pages }, (_, i) => getRecent(i + 1, 50)));
   }
 
+  // ── Top 10 Trending Today ──────────────────────────────────────────────────
+  // Primary: AniList TRENDING_DESC + RELEASING (real-time trending scores)
+  // Fallback: Jikan top/anime?filter=airing (by popularity)
+  async function getTrending(limit = 10) {
+    const key = `trending:top${limit}`;
+    const cached = cache.get(key);
+    if (cached) return cached;
+
+    return cache.dedupe(key, async () => {
+      // Try AniList first — most accurate trending data
+      try {
+        const graphql = `
+          query ($perPage: Int) {
+            Page(page: 1, perPage: $perPage) {
+              media(
+                sort: TRENDING_DESC
+                type: ANIME
+                status: RELEASING
+                isAdult: false
+              ) {
+                id
+                idMal
+                title { romaji english native userPreferred }
+                coverImage { large medium }
+                startDate { year }
+                seasonYear
+                averageScore
+                status
+                format
+                episodes
+                trending
+                description
+                genres
+                synonyms
+              }
+            }
+          }
+        `;
+        const json = await fetchAniList(graphql, { perPage: limit });
+        const media = json.data?.Page?.media || [];
+        if (media.length) {
+          const items = media.map(normalizeAniListMedia);
+          const result = { items, source: 'anilist' };
+          cache.set(key, result, TTL.trending);
+          return result;
+        }
+      } catch (aniErr) {
+        console.warn('[AniList Trending] failed, falling back to Jikan:', aniErr.message);
+      }
+
+      // Fallback: Jikan airing by rank
+      try {
+        const json = await fetchJSON(
+          `${upstream.jikan}/top/anime?filter=airing&page=1&limit=${limit}`
+        );
+        const items = (json.data || []).slice(0, limit).map(normalizeJikan);
+        const result = { items, source: 'jikan' };
+        cache.set(key, result, TTL.trending);
+        return result;
+      } catch (jikanErr) {
+        // Return stale cache if available
+        const stale = cache.getStale(key);
+        if (stale) return stale;
+        throw new Error(`Trending fetch failed: AniList and Jikan both unavailable. Jikan: ${jikanErr.message}`);
+      }
+    });
+  }
+
   return {
     getRecent,
     getSeries,
     browseJikan,
     getHomeFeed,
+    getTrending,
     searchJikan,
     resolveByMalId,
     resolveBySeriesId,

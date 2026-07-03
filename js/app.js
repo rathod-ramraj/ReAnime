@@ -323,6 +323,12 @@ async function init() {
       applyHomeData(data);
     }
   };
+  window.__onTrendingUpdate = (data) => {
+    if (state.view === 'home' && state.homeCategory === 'home' && !state.searchMode && data.items) {
+      state.trendingItems = data.items;
+      renderTrending();
+    }
+  };
   loadHomeData();
   loadRecent();
   syncMobileBrowseBar();
@@ -865,31 +871,16 @@ async function loadTrendingSection() {
   }
 
   try {
-    const [airing1, popular1, airing2] = await Promise.all([
-      API.getBrowse('airing', 1),
-      API.getBrowse('popular', 1),
-      API.getBrowse('airing', 2),
-    ]);
-    const seen = new Set();
-    const merged = [];
-    for (const list of [airing1.items, popular1.items, airing2.items]) {
-      for (const a of list || []) {
-        const id = a.malId;
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        merged.push(a);
-        if (merged.length >= 10) break;
-      }
-      if (merged.length >= 10) break;
-    }
-    if (merged.length) {
-      state.trendingItems = merged.slice(0, 10);
+    const result = await API.getTrending(10);
+    if (result.items && result.items.length) {
+      state.trendingItems = result.items;
       renderTrending();
       revealSection(els.homeTrendingSection);
     } else if (!state.trendingItems.length) {
       els.trendingRow.innerHTML = '<div class="empty-state">No trending anime</div>';
     }
-  } catch {
+  } catch (err) {
+    console.error('[loadTrendingSection] Error:', err);
     if (!state.trendingItems.length) {
       els.trendingRow.innerHTML = '<div class="empty-state">No trending anime</div>';
     }

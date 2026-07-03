@@ -138,6 +138,22 @@ function createApp() {
     }
   });
 
+  app.get('/api/trending', async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit || '10', 10), 25);
+      const hit = !!cache.get(`trending:top${limit}`);
+      const result = await resolver.getTrending(limit);
+      res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
+      res.setHeader('X-Source', result.source || 'unknown');
+      res.setHeader('Cache-Control', 'public, max-age=900');
+      res.json(result);
+    } catch (err) {
+      const stale = cache.getStale(`trending:top10`);
+      if (stale) return res.json(stale);
+      res.status(502).json({ ok: false, error: err.message });
+    }
+  });
+
   app.get('/api/cache/stats', (_req, res) => {
     res.json({ entries: cache.store.size, malIndex: cache.malIndex.size });
   });
@@ -293,6 +309,7 @@ function createApp() {
 
   resolver.warmMalIndex(4).catch(() => {});
   resolver.getHomeFeed().catch(() => {});
+  resolver.getTrending(10).catch(() => {});
   resolver.browseJikan('popular', 1).catch(() => {});
 
   return app;

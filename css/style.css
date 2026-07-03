@@ -999,26 +999,50 @@ html.perf-streaming .brand-name { animation: none; }
   position: relative;
 }
 
-/* Top 10 Today Section Styles matching user specifications */
-.top10-container .section-title {
-  font-family: 'Outfit', sans-serif;
-  font-size: 32px;
-  font-weight: 800;
+/* ── TOP 10 Premium Header ──────────────────────────────── */
+.top10-header {
+  display: flex;
+  align-items: center;
+  gap: 40px;
   margin-bottom: 40px;
-  letter-spacing: -0.5px;
-  padding-bottom: 0;
+  user-select: none;
 }
-.top10-container .section-title::after {
-  display: none;
+
+.top10-headline {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(100px, 14vw, 200px);
+  font-weight: 400;
+  line-height: 0.85;
+  letter-spacing: -2px;
+  color: #0c0c0e;
+  -webkit-text-stroke: 2px #9DFF00;
+  text-shadow:
+    0 0 6px rgba(157, 255, 0, 0.5),
+    0 0 20px rgba(157, 255, 0, 0.3),
+    0 0 60px rgba(157, 255, 0, 0.15);
+  margin: 0;
+  padding: 0;
+}
+
+.top10-subtext {
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+  font-family: 'Montserrat', 'Outfit', sans-serif;
+  font-size: clamp(20px, 3vw, 40px);
+  font-weight: 300;
+  line-height: 1.45;
+  letter-spacing: 16px;
+  text-transform: uppercase;
 }
 
 .top10-row {
   display: flex;
-  gap: 40px;
+  gap: 60px;
   overflow-x: auto;
   scroll-behavior: smooth;
   scrollbar-width: none;
-  padding: 20px 0 40px 40px;
+  padding: 20px 0 50px 56px;
   margin-left: -40px;
 }
 .top10-row::-webkit-scrollbar {
@@ -1061,15 +1085,19 @@ html.perf-streaming .brand-name { animation: none; }
 
 .rank-number {
   position: absolute;
-  left: -35px;
-  bottom: -20px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 150px;
-  font-weight: 900;
+  left: -52px;
+  bottom: -32px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 230px;
+  font-weight: 400;
   line-height: 0.8;
   z-index: 1;
-  color: transparent;
-  -webkit-text-stroke: 2.5px var(--highlight);
+  color: #0c0c0e;
+  -webkit-text-stroke: 2px #9DFF00;
+  text-shadow:
+    0 0 6px rgba(157, 255, 0, 0.5),
+    0 0 20px rgba(157, 255, 0, 0.3),
+    0 0 60px rgba(157, 255, 0, 0.15);
   pointer-events: none;
   user-select: none;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -1098,6 +1126,7 @@ html.perf-streaming .brand-name { animation: none; }
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   line-height: 1.4;
   height: 40px;
@@ -2948,9 +2977,18 @@ html.perf-streaming .brand-name { animation: none; }
     padding-bottom: 8px;
     -webkit-overflow-scrolling: touch;
   }
-  .top10-container .section-title {
-    font-size: 24px;
-    margin-bottom: 24px;
+  .top10-header {
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .top10-headline {
+    font-size: clamp(64px, 16vw, 110px);
+    letter-spacing: -1px;
+    -webkit-text-stroke: 1.5px #9DFF00;
+  }
+  .top10-subtext {
+    font-size: clamp(14px, 4vw, 24px);
+    letter-spacing: 10px;
   }
   .top10-row {
     gap: 22px;
@@ -2976,6 +3014,7 @@ html.perf-streaming .brand-name { animation: none; }
     font-size: 12px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3202,6 +3241,9 @@ html.perf-streaming .brand-name { animation: none; }
   .container-max { padding-left: 12px; padding-right: 12px; }
 
   /* TOP 10 trending row */
+  .top10-header { gap: 14px; margin-bottom: 16px; }
+  .top10-headline { font-size: clamp(52px, 18vw, 80px); letter-spacing: -1px; -webkit-text-stroke: 1px #9DFF00; }
+  .top10-subtext { font-size: clamp(12px, 4.5vw, 18px); letter-spacing: 7px; }
   .top10-row { gap: 18px; padding: 10px 0 24px 28px; }
   .movie-card { flex: 0 0 110px; }
   .card-inner { height: 160px; }

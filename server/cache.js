@@ -4,6 +4,7 @@ const TTL = {
   series: 60 * 60 * 1000,
   jikan: 60 * 60 * 1000,
   anilist: 60 * 60 * 1000,
+  trending: 15 * 60 * 1000,   // 15 min — trending changes frequently
   resolve: 60 * 60 * 1000,
   proxy: 5 * 60 * 1000,
 };

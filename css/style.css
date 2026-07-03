@@ -1172,6 +1172,7 @@ html.perf-streaming .brand-name { animation: none; }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 16px;
+  padding-top: 16px;
 }
 
 /* Home section grids styled as single scrollable horizontal rows */
@@ -1182,6 +1183,7 @@ html.perf-streaming .brand-name { animation: none; }
   gap: 18px;
   scroll-behavior: smooth;
   scrollbar-width: none;
+  padding-top: 16px;
   padding-bottom: 12px;
   -webkit-overflow-scrolling: touch;
 }
@@ -2530,6 +2532,7 @@ html.perf-streaming .brand-name { animation: none; }
   gap: 14px;
   overflow-x: auto;
   scroll-behavior: smooth;
+  padding-top: 16px;
   padding-bottom: 8px;
 }
 

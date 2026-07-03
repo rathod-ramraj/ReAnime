@@ -448,15 +448,25 @@ function bindEvents() {
   els.heroWatch?.addEventListener('click', () => openSpotlightAnime(true));
   els.heroDetail?.addEventListener('click', () => openSpotlightAnime(false));
 
-  // Mobile swipe gestures for spotlight slider
-  let touchStartX = 0;
-  let touchEndX = 0;
-  els.heroSection?.addEventListener('touchstart', (e) => {
-    touchStartX = e.changedTouches[0].screenX;
-  }, { passive: true });
-  els.heroSection?.addEventListener('touchend', (e) => {
-    touchEndX = e.changedTouches[0].screenX;
-    const diffX = touchEndX - touchStartX;
+  // Swipe/drag gestures for spotlight slider (supports touch & mouse)
+  let heroPtrStartX = 0;
+  let heroPtrIsDragging = false;
+  
+  els.heroSection?.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    heroPtrIsDragging = true;
+    heroPtrStartX = e.clientX;
+    els.heroSection.setPointerCapture(e.pointerId);
+    els.heroSection.style.cursor = 'grabbing';
+  });
+
+  const endHeroDrag = (e) => {
+    if (!heroPtrIsDragging) return;
+    heroPtrIsDragging = false;
+    els.heroSection.style.cursor = '';
+    els.heroSection.releasePointerCapture(e.pointerId);
+    
+    const diffX = e.clientX - heroPtrStartX;
     if (Math.abs(diffX) > 50) {
       if (diffX > 0) {
         stepSpotlight(-1);
@@ -465,7 +475,10 @@ function bindEvents() {
       }
       resetSpotlightAutoplay();
     }
-  }, { passive: true });
+  };
+
+  els.heroSection?.addEventListener('pointerup', endHeroDrag);
+  els.heroSection?.addEventListener('pointercancel', endHeroDrag);
   els.trendingNext?.addEventListener('click', () => {
     els.trendingRow?.scrollBy({ left: 320, behavior: 'smooth' });
   });

@@ -745,7 +745,7 @@ function explodeCardToPieces(card) {
     p.style.setProperty('--ty', `${ty}px`);
     p.style.left = `50%`;
     p.style.top = `50%`;
-    const dur = 0.5 + Math.random() * 0.3;
+    const dur = 1.5 + Math.random() * 1.5; // slow motion duration between 1.5s and 3.0s
     p.style.animation = `shatterPiece ${dur}s forwards cubic-bezier(0.25, 1, 0.5, 1)`;
     card.appendChild(p);
   }
@@ -788,7 +788,7 @@ function renderContinueWatching() {
         UserStore.removeHistory(items[idx].id);
         renderContinueWatching();
         showToast('Removed from Continue Watching', 'success');
-      }, 600);
+      }, 2500); // Wait 2.5 seconds for slow motion particles to finish falling
     });
   });
 }

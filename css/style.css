@@ -3117,7 +3117,7 @@ html.perf-streaming .brand-name { animation: none; }
   .tool-btn { padding: 8px 14px; font-size: 12px; white-space: nowrap; min-height: 36px; }
   .tool-check { font-size: 11px; white-space: nowrap; }
 
-  .server-panel { display: none; }
+  /* .server-panel { display: none; } removed to allow mobile server change */
 
   .episodes-toolbar {
     padding: 10px 12px;

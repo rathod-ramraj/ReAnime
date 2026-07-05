@@ -574,14 +574,23 @@ function closeMobileSearch() {
   });
 }
 
-function renderMobileSearchResults() {
+function renderMobileSearchResults(rebuild = false) {
   if (!els.mobileSearchResults) return;
-  if (!state.searchResults.length) {
+  
+  if (!state.searchResults.length || !state.searchOpen) {
     els.mobileSearchResults.innerHTML = state.searchQuery.length >= 2
       ? '<p class="mobile-search-empty">No results found</p>'
       : '<p class="mobile-search-empty">Type to search anime…</p>';
     return;
   }
+
+  if (!rebuild && els.mobileSearchResults.children.length === state.searchResults.length && els.mobileSearchResults.children[0]?.tagName === 'BUTTON') {
+    els.mobileSearchResults.querySelectorAll('.search-item').forEach((el, i) => {
+      el.classList.toggle('active', i === state.searchIndex);
+    });
+    return;
+  }
+
   els.mobileSearchResults.innerHTML = state.searchResults.map((anime, i) => `
     <button type="button" class="search-item mobile-search-item${i === state.searchIndex ? ' active' : ''}" data-idx="${i}" data-mal="${anime.malId}">
       ${imgTag(anime.poster, '')}
@@ -591,12 +600,13 @@ function renderMobileSearchResults() {
       </div>
     </button>`).join('');
 
-  els.mobileSearchResults.querySelectorAll('.mobile-search-item').forEach((el) => {
+  els.mobileSearchResults.querySelectorAll('.search-item').forEach((el) => {
     const idx = parseInt(el.dataset.idx, 10);
     el.addEventListener('click', () => {
       closeMobileSearch();
       openSearchResult(state.searchResults[idx]);
     });
+    el.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(el.dataset.mal, 10)));
   });
 }
 
@@ -1247,7 +1257,7 @@ async function onSearchInput(e) {
     state.searchIndex = -1;
     preserveScroll(() => {
       if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) {
-        renderMobileSearchResults();
+        renderMobileSearchResults(rebuildDropdown);
       }
       renderSearchDropdown(rebuildDropdown);
     });
@@ -1468,10 +1478,12 @@ function onSearchKeydown(e) {
     e.preventDefault();
     state.searchIndex = Math.min(state.searchIndex + 1, state.searchResults.length - 1);
     renderSearchDropdown(false);
+    if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) renderMobileSearchResults(false);
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     state.searchIndex = Math.max(state.searchIndex - 1, 0);
     renderSearchDropdown(false);
+    if (isMobileView() && !els.mobileSearchSheet?.classList.contains('hidden')) renderMobileSearchResults(false);
   } else if (e.key === 'Escape') {
     state.searchOpen = false;
     exitSearchMode();

@@ -1,6 +1,6 @@
-# AnimeXplore — Complete Website SEO Guide (2026)
+# ReAnime — Complete Website SEO Guide (2026)
 
-How to rank AnimeXplore on Google and other search engines.
+How to rank ReAnime on Google and other search engines.
 
 ## What is SEO?
 
@@ -9,14 +9,14 @@ SEO (Search Engine Optimization) helps search engines understand, trust, and ran
 ## Google Search Console Setup
 
 1. Open [Google Search Console](https://search.google.com/search-console)
-2. Add your domain/property (`https://animexploree.vercel.app` or your custom domain)
+2. Add your domain/property (`https://ReAnimee.vercel.app` or your custom domain)
 3. Verify ownership using **DNS** or **HTML** methods
 4. Submit `sitemap.xml` → `https://YOUR-DOMAIN/sitemap.xml`
 5. Monitor indexing and keyword performance
 
 > **Important:** Update `robots.txt` and `sitemap.xml` with your real production URL when you add a custom domain.
 
-## Technical SEO (already on AnimeXplore)
+## Technical SEO (already on ReAnime)
 
 | Item | Status |
 |------|--------|

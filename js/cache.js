@@ -9,7 +9,7 @@ const Cache = {
     browse: 30 * 60 * 1000,
     home: 30 * 60 * 1000,
   },
-  LS_PREFIX: 'animexplore:',
+  LS_PREFIX: 'ReAnime:',
 
   get(key) {
     const mem = this.memory.get(key);

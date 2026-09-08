@@ -1,5 +1,5 @@
-/* AnimeXplore service worker — required for browser install (address bar icon) */
-const CACHE = 'animexplore-shell-v4';
+/* ReAnime service worker — required for browser install (address bar icon) */
+const CACHE = 'ReAnime-shell-v4';
 const SHELL = [
   '/manifest.json',
   '/favicon.png?v=2',

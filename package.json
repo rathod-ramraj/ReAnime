@@ -1,7 +1,7 @@
 {
-  "name": "animexplore",
+  "name": "ReAnime",
   "version": "1.0.0",
-  "description": "AnimeXplore — anime streaming with Anikoto + MegaPlay",
+  "description": "ReAnime — anime streaming with Anikoto + MegaPlay",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

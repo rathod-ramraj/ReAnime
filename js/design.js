@@ -3,17 +3,17 @@ async function initDesign() {
     const res = await fetch('/Design.json');
     const design = await res.json();
     applyDesignPalette(design);
-    applyAnimeXploreTheme();
+    applyReAnimeTheme();
     document.title = 'Home - ReAnime - Watch Anime Online, Free Anime Streaming';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = '#0c0c0e';
   } catch (e) {
     console.warn('[Design] Could not load Design.json', e);
-    applyAnimeXploreTheme();
+    applyReAnimeTheme();
   }
 }
 
-function applyAnimeXploreTheme() {
+function applyReAnimeTheme() {
   const root = document.documentElement;
   const theme = {
     '--bg': '#0c0c0e',

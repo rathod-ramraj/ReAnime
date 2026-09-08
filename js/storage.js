@@ -1,5 +1,5 @@
 const UserStore = {
-  PREFIX: 'animexplore:',
+  PREFIX: 'ReAnime:',
 
   _read(key, fallback) {
     try {

@@ -123,7 +123,7 @@ async function fetchJSON(url, options = {}, retries = 3) {
       const res = await fetch(url, {
         ...options,
         headers: {
-          'User-Agent': 'AnimeXplore/1.0',
+          'User-Agent': 'ReAnime/1.0',
           Accept: 'application/json',
           ...options.headers,
         },

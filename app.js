@@ -32,7 +32,7 @@ function createApp() {
     const res = await fetch(url, {
       ...options,
       headers: {
-        'User-Agent': 'AnimeXplore/1.0',
+        'User-Agent': 'ReAnime/1.0',
         Accept: 'application/json',
         ...options.headers,
       },
@@ -181,7 +181,7 @@ function createApp() {
     try {
       const upstream = await fetch(parsed.href, {
         headers: {
-          'User-Agent': 'AnimeXplore/1.0',
+          'User-Agent': 'ReAnime/1.0',
           Accept: 'image/*',
           Referer: 'https://myanimelist.net/',
         },

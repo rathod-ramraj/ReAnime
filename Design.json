@@ -1,11 +1,10 @@
 {
-  "$schema": "animexplore-design-system/v1",
+  "$schema": "ReAnime-design-system/v1",
   "design_system": {
-    "name": "AnimeXplore Cinematic Dark UI",
+    "name": "ReAnime Cinematic Dark UI",
     "version": "1.0",
-    "description": "Design specification for AnimeXplore — dark cinematic anime streaming UI. Values mirror css/style.css and index.html. Loaded at runtime by js/design.js.",
-    "source_project": "AnimeXplore / animexploree",
-
+    "description": "Design specification for ReAnime — dark cinematic anime streaming UI. Values mirror css/style.css and index.html. Loaded at runtime by js/design.js.",
+    "source_project": "ReAnime / ReAnimee",
     "user_notes": {
       "recommended_browser": {
         "name": "Brave Browser",
@@ -15,10 +14,12 @@
           "Smoother handling of third-party streaming embed redirects",
           "Better performance for iframe-based MegaPlay players"
         ],
-        "ui_placement": ["footer.footer-browser-tip", "README.md Recommended browser section"]
+        "ui_placement": [
+          "footer.footer-browser-tip",
+          "README.md Recommended browser section"
+        ]
       }
     },
-
     "style": {
       "theme": "cinematic_dark",
       "theme_color": "#050505",
@@ -33,9 +34,8 @@
         "Motion pauses during streaming via html.perf-streaming",
         "ShapeGrid background disabled (display:none) in production theme"
       ],
-
       "css_custom_properties": {
-        "_comment": "Map 1:1 to :root in css/style.css. applyAnimeXploreTheme() in js/design.js overrides highlight/gold tokens at runtime.",
+        "_comment": "Map 1:1 to :root in css/style.css. applyReAnimeTheme() in js/design.js overrides highlight/gold tokens at runtime.",
         "--bg": "#050505",
         "--surface": "rgba(255, 255, 255, 0.08)",
         "--surface-2": "rgba(255, 255, 255, 0.04)",
@@ -73,9 +73,8 @@
         "--gold-bright": "#f5d87a",
         "--gold-dim": "rgba(232, 197, 71, 0.15)"
       },
-
       "runtime_theme_overrides": {
-        "_comment": "Applied by applyAnimeXploreTheme() after Design.json load",
+        "_comment": "Applied by applyReAnimeTheme() after Design.json load",
         "--highlight": "#d4a853",
         "--highlight-soft": "#e8c547",
         "--grad-brand": "linear-gradient(135deg, #3b82f6, #d4a853)",
@@ -85,7 +84,6 @@
         "--glass-border": "rgba(255, 255, 255, 0.08)",
         "--glass-border-2": "rgba(255, 255, 255, 0.05)"
       },
-
       "color_palette": {
         "primary_bg": "#050505",
         "secondary_bg": "rgba(255, 255, 255, 0.04)",
@@ -106,31 +104,47 @@
         "success": "#10b981",
         "warning": "#f59e0b"
       },
-
       "gradients": {
         "brand_primary": {
           "css": "linear-gradient(135deg, #3b82f6, #06b6d4)",
           "css_runtime": "linear-gradient(135deg, #3b82f6, #d4a853)",
-          "usage": ["tool-btn.active", "server-btn.active", "ep-row.active", "rating-score text"]
+          "usage": [
+            "tool-btn.active",
+            "server-btn.active",
+            "ep-row.active",
+            "rating-score text"
+          ]
         },
         "brand_name": {
           "css": "linear-gradient(90deg, #ffffff 0%, #7ec8ff 45%, #e8c547 100%)",
-          "usage": [".brand-name", ".footer-brand-text"]
+          "usage": [
+            ".brand-name",
+            ".footer-brand-text"
+          ]
         },
         "hero_overlay": {
           "css": "multi-layer linear gradients left vignette + bottom fade + top shade",
-          "usage": [".hero-overlay"]
+          "usage": [
+            ".hero-overlay"
+          ]
         },
         "server_panel": {
           "css": "linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(6, 182, 212, 0.05))",
-          "usage": [".server-panel"]
+          "usage": [
+            ".server-panel"
+          ]
         }
       },
-
       "typography": {
         "font_family": "Inter, SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif",
         "google_fonts_url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
-        "weights": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700, "extrabold": 800 },
+        "weights": {
+          "regular": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700,
+          "extrabold": 800
+        },
         "antialiasing": "-webkit-font-smoothing: antialiased",
         "line_height_body": 1.6,
         "scale": {
@@ -168,7 +182,6 @@
           }
         }
       },
-
       "spacing": {
         "unit": 8,
         "header_height": "72px",
@@ -179,14 +192,12 @@
         "hero_inner_padding": "48px 48px 56px",
         "footer_padding": "48px 32px 36px desktop / 32px 16px mobile"
       },
-
       "radius": {
         "small": "8px",
         "medium": "16px",
         "large": "24px",
         "pill": "999px"
       },
-
       "shadows": {
         "soft": "0 8px 32px rgba(0, 0, 0, 0.5)",
         "glass_inset": "inset 0 0 0 1px rgba(255, 255, 255, 0.08)",
@@ -195,7 +206,6 @@
         "btn_watch_hover": "0 8px 24px rgba(232, 197, 71, 0.35)",
         "trending_card_hover": "0 12px 32px rgba(0, 0, 0, 0.45)"
       },
-
       "z_index_layers": {
         "main_content": 2,
         "search_dropdown": 200,
@@ -205,10 +215,12 @@
         "devtools_block": 999999
       }
     },
-
     "layout": {
       "type": "spa_multi_view",
-      "views": ["homeView", "seriesView"],
+      "views": [
+        "homeView",
+        "seriesView"
+      ],
       "scroll_behavior": "smooth",
       "section_order_home": [
         "site-header (sticky)",
@@ -237,7 +249,6 @@
         "desktop": "min-width: 1025px"
       }
     },
-
     "background": {
       "shapegrid": {
         "container_id": "sg-global-bg",
@@ -249,7 +260,6 @@
         "overflow_x": "hidden"
       }
     },
-
     "components": {
       "proxy_banner": {
         "id": "proxyBanner",
@@ -261,7 +271,6 @@
           "color": "var(--highlight-soft)"
         }
       },
-
       "site_header": {
         "class": "site-header",
         "position": "sticky top 0",
@@ -274,7 +283,7 @@
             "class": "brand",
             "icon": "favicon.png 40×40",
             "text_class": "brand-name",
-            "text": "AnimeXplore"
+            "text": "ReAnime"
           },
           "search": {
             "wrap": "search-wrap",
@@ -285,12 +294,17 @@
           },
           "nav": {
             "class": "header-nav",
-            "items": ["Home", "Movies", "TV Series", "Most Popular", "Top Airing"],
+            "items": [
+              "Home",
+              "Movies",
+              "TV Series",
+              "Most Popular",
+              "Top Airing"
+            ],
             "active_state": "color gold-bright, background gold-dim"
           }
         }
       },
-
       "hero_spotlight": {
         "id": "heroSection",
         "class": "hero-spotlight",
@@ -301,13 +315,18 @@
           "hero_rank": "gold #1 Spotlight label",
           "hero_title": "clamp title",
           "hero_meta": "badge pills (HD, score, type)",
-          "hero_actions": ["btn-watch gold pill", "btn-detail purple glass"],
+          "hero_actions": [
+            "btn-watch gold pill",
+            "btn-detail purple glass"
+          ],
           "hero_controls": "vertical prev/next arrows"
         }
       },
-
       "home_sections": {
-        "continue_watching": { "id": "continueSection", "title_class": "section-title-gold" },
+        "continue_watching": {
+          "id": "continueSection",
+          "title_class": "section-title-gold"
+        },
         "trending": {
           "id": "homeTrendingSection",
           "row": "trending-row horizontal scroll",
@@ -319,7 +338,6 @@
           "grid": "category-grid auto-fill minmax(160px, 1fr)"
         }
       },
-
       "watch_zone": {
         "id": "playerWrap",
         "class": "watch-zone glass-panel",
@@ -329,9 +347,15 @@
           "placeholder_id": "playerPlaceholder"
         },
         "toolbar": {
-          "prev_next": ["prevEpBtn", "nextEpBtn"],
+          "prev_next": [
+            "prevEpBtn",
+            "nextEpBtn"
+          ],
           "auto_next": "autoNext checkbox",
-          "sub_dub": ["subBtn", "dubBtn"]
+          "sub_dub": [
+            "subBtn",
+            "dubBtn"
+          ]
         },
         "server_panel": {
           "watching_msg": "watchingMsg",
@@ -339,48 +363,77 @@
           "dub_servers": "dubServers"
         }
       },
-
       "episodes_panel": {
         "class": "episodes-panel glass-panel",
-        "toolbar": ["epLangFilter", "epRange", "epFind"],
+        "toolbar": [
+          "epLangFilter",
+          "epRange",
+          "epFind"
+        ],
         "list": "episode-list max-height 380px scroll",
         "row_active": "grad-brand background"
       },
-
       "detail_panel": {
         "class": "detail-panel glass-card",
         "grid": "180px poster | body | 200px rating card",
-        "elements": ["seriesPoster", "seriesTitle", "bookmarkBtn", "seriesBadges", "seriesDesc", "metaGrid", "ratingCard", "franchiseSection"]
+        "elements": [
+          "seriesPoster",
+          "seriesTitle",
+          "bookmarkBtn",
+          "seriesBadges",
+          "seriesDesc",
+          "metaGrid",
+          "ratingCard",
+          "franchiseSection"
+        ]
       },
-
       "sidebar_related": {
         "class": "sidebar-related glass-panel",
         "width": "var(--sidebar-w) 300px",
         "position": "sticky",
         "list_id": "recentList",
-        "pagination": ["prevPage", "nextPage", "pageInfo"]
+        "pagination": [
+          "prevPage",
+          "nextPage",
+          "pageInfo"
+        ]
       },
-
       "mobile_bottom_nav": {
         "id": "mobileNav",
         "class": "mobile-bottom-nav",
-        "items": ["Home", "Search", "Browse", "Library"],
+        "items": [
+          "Home",
+          "Search",
+          "Browse",
+          "Library"
+        ],
         "display": "flex on mobile only"
       },
-
       "site_footer": {
         "class": "site-footer",
         "sections": {
-          "az_list": { "id": "azGrid", "title": "A-Z List" },
-          "footer_mid": { "brand": "AnimeXplore", "links": ["Help", "Request Anime", "DMCA", "Terms", "Contact", "Friends"] },
+          "az_list": {
+            "id": "azGrid",
+            "title": "A-Z List"
+          },
+          "footer_mid": {
+            "brand": "ReAnime",
+            "links": [
+              "Help",
+              "Request Anime",
+              "DMCA",
+              "Terms",
+              "Contact",
+              "Friends"
+            ]
+          },
           "footer_legal": {
             "browser_tip": "Brave Browser recommendation",
-            "copyright": "AnimeXplore",
+            "copyright": "ReAnime",
             "disclaimer": "No files stored on server"
           }
         }
       },
-
       "buttons": {
         "btn_watch": {
           "class": "btn-watch",
@@ -402,7 +455,6 @@
           "active": "grad-brand gradient"
         }
       },
-
       "glass_surfaces": {
         "glass_panel": {
           "class": "glass-panel",
@@ -417,7 +469,6 @@
           "floating_orbs": "disabled (display:none on ::before/::after)"
         }
       },
-
       "devtools_block": {
         "id": "dt-block",
         "z_index": 999999,
@@ -425,14 +476,26 @@
         "message": "Access Restricted — close Developer Tools"
       }
     },
-
     "animations": {
       "keyframes": {
-        "fadeUp": { "from": "opacity 0 translateY(12px)", "to": "opacity 1 translateY(0)" },
-        "viewIn": { "from": "opacity 0 translateY(14px)", "to": "opacity 1 translateY(0)" },
-        "cardIn": { "from": "opacity 0 translateY(10px) scale(0.98)", "to": "opacity 1 scale(1)" },
-        "spin": { "to": "rotate(360deg)" },
-        "shimmer": { "usage": "brand gradient text optional" }
+        "fadeUp": {
+          "from": "opacity 0 translateY(12px)",
+          "to": "opacity 1 translateY(0)"
+        },
+        "viewIn": {
+          "from": "opacity 0 translateY(14px)",
+          "to": "opacity 1 translateY(0)"
+        },
+        "cardIn": {
+          "from": "opacity 0 translateY(10px) scale(0.98)",
+          "to": "opacity 1 scale(1)"
+        },
+        "spin": {
+          "to": "rotate(360deg)"
+        },
+        "shimmer": {
+          "usage": "brand gradient text optional"
+        }
       },
       "view_transitions": {
         "view_enter": "viewIn var(--dur-slow)",
@@ -441,7 +504,6 @@
       "card_stagger": "anime-card nth-child animation-delay 0.02s increments",
       "reduced_motion": "@media prefers-reduced-motion — disable animations"
     },
-
     "performance_modes": {
       "html_classes": {
         "perf-streaming": "disable backdrop-filter on glass surfaces and header"
@@ -450,10 +512,9 @@
         "streaming_blur_off": "solid rgba(18,16,25,0.94) replaces glass blur on panels"
       }
     },
-
     "interaction_patterns": {
       "page_titles": {
-        "default": "AnimeXplore — Watch Anime Online Free in HD",
+        "default": "ReAnime — Watch Anime Online Free in HD",
         "managed_by": "js/seo.js"
       },
       "search": {
@@ -462,7 +523,11 @@
       },
       "streaming": {
         "embed_provider": "MegaPlay megaplay.buzz",
-        "modes": ["embed_id sub/dub", "mal fallback", "ani fallback"]
+        "modes": [
+          "embed_id sub/dub",
+          "mal fallback",
+          "ani fallback"
+        ]
       },
       "protection": {
         "devtools_block": "desktop only — disabled on touch/mobile viewports",
@@ -470,7 +535,6 @@
         "bot_guard": "desktop automation UAs only; mobile browsers exempt"
       }
     },
-
     "responsive_rules": {
       "mobile_max_768": {
         "header_nav": "hidden or collapsed",
@@ -481,13 +545,12 @@
         "server_panel": "single column grid"
       }
     },
-
     "reuse_guide": {
       "quick_start": [
         "1. Copy Design.json and js/design.js into project",
         "2. Link Inter from Google Fonts and css/style.css :root vars",
         "3. Call initDesign() on DOMContentLoaded to load palette",
-        "4. applyAnimeXploreTheme() sets gold/blue runtime tokens",
+        "4. applyReAnimeTheme() sets gold/blue runtime tokens",
         "5. Match HTML structure from index.html components section",
         "6. Recommend Brave Browser for streaming redirects (see user_notes)"
       ],
@@ -500,8 +563,8 @@
       },
       "meta_tags": {
         "theme_color": "#050505",
-        "site_name": "AnimeXplore",
-        "description": "AnimeXplore — Watch Anime Online Free in HD"
+        "site_name": "ReAnime",
+        "description": "ReAnime — Watch Anime Online Free in HD"
       }
     }
   }

@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /proxy/
 
-Sitemap: https://animexploree.vercel.app/sitemap.xml
+Sitemap: https://ReAnimee.vercel.app/sitemap.xml

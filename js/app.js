@@ -2436,7 +2436,7 @@ function setPlayerPlaceholder(text) {
 // ─── PWA install prompt ───────────────────────────────────────────────────
 let deferredInstallPrompt = null;
 let installPopupTimer = null;
-const INSTALL_DISMISS_KEY = 'animexplore:installDismissed';
+const INSTALL_DISMISS_KEY = 'ReAnime:installDismissed';
 const INSTALL_DISMISS_DAYS = 14;
 
 function isAppInstalled() {

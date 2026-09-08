@@ -1,6 +1,6 @@
-# AnimeXplore
+# ReAnime
 
-![AnimeXplore Preview](./preview-image.png)
+![ReAnime Preview](./preview-image.png)
 
 Anime streaming web app with cached search, fast ID resolution, and MegaPlay embeds.
 
@@ -35,9 +35,9 @@ Use **[Brave Browser](https://brave.com/)** for the best experience — faster p
    ```bash
    git init
    git add .
-   git commit -m "AnimeXplore initial deploy"
+   git commit -m "ReAnime initial deploy"
    git branch -M main
-   git remote add origin https://github.com/rathod-ramraj/animexploree.git
+   git remote add origin https://github.com/rathod-ramraj/ReAnimee.git
    git push -u origin main
    ```
 
@@ -54,7 +54,7 @@ Use **[Brave Browser](https://brave.com/)** for the best experience — faster p
    - Static files (`index.html`, `css/`, `js/`, `Design.json`) are served
    - `/api/*` and `/proxy/*` routes go to the Express serverless function in `api/index.js`
 
-4. **Open your live URL** — e.g. `https://animexplore.vercel.app`
+4. **Open your live URL** — e.g. `https://ReAnime.vercel.app`
 
 ### Option B — Vercel CLI (no GitHub)
 

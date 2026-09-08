@@ -3,17 +3,11 @@ const path = require('path');
 const { ApiCache, TTL } = require('./server/cache');
 const { createResolver } = require('./server/resolve');
 const { botGuardMiddleware } = require('./server/bot-guard');
-const {
-  resolveDownloadSources,
-  streamHlsToResponse,
-  proxyFileDownload,
-} = require('./server/download');
 
 const ROOT = __dirname;
 
 const UPSTREAM = {
   anikoto: 'https://anikotoapi.site',
-  jikan: 'https://api.jikan.moe/v4',
   anilist: 'https://graphql.anilist.co',
 };
 
@@ -68,7 +62,7 @@ function createApp() {
     try {
       const page = parseInt(req.query.page || '1', 10);
       const hit = !!cache.get(`search:${q.toLowerCase()}:${page}`);
-      const result = await resolver.searchJikan(q, page);
+      const result = await resolver.search(q, page);
       res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
       res.json(result);
     } catch (err) {
@@ -119,7 +113,7 @@ function createApp() {
     try {
       const page = parseInt(req.query.page || '1', 10);
       const hit = !!cache.get(`browse:${type}:${page}`);
-      const result = await resolver.browseJikan(type, page);
+      const result = await resolver.browse(type, page);
       res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
       res.json(result);
     } catch (err) {
@@ -158,51 +152,6 @@ function createApp() {
     res.json({ entries: cache.store.size, malIndex: cache.malIndex.size });
   });
 
-  app.get('/api/download/resolve', async (req, res) => {
-    try {
-      const params = {
-        method: req.query.method || 'embed',
-        embedId: req.query.embedId || null,
-        malId: req.query.malId ? parseInt(req.query.malId, 10) : null,
-        aniId: req.query.aniId ? parseInt(req.query.aniId, 10) : null,
-        episode: req.query.episode ? parseInt(req.query.episode, 10) : null,
-        lang: req.query.lang || 'sub',
-        embedUrl: req.query.embedUrl || null,
-      };
-      const cacheKey = `dl:resolve:${JSON.stringify(params)}`;
-      const cached = cache.get(cacheKey);
-      if (cached) return res.json(cached);
-
-      const result = await resolveDownloadSources(params);
-      cache.set(cacheKey, result, 10 * 60 * 1000);
-      res.json(result);
-    } catch (err) {
-      res.status(502).json({ ok: false, error: err.message });
-    }
-  });
-
-  app.get('/api/download/file', async (req, res) => {
-    const rawUrl = (req.query.url || '').trim();
-    const filename = (req.query.filename || 'video.mp4').trim();
-    let parsed;
-    try {
-      parsed = new URL(rawUrl);
-    } catch {
-      return res.status(400).json({ ok: false, error: 'Invalid url' });
-    }
-    if (parsed.protocol !== 'https:') {
-      return res.status(400).json({ ok: false, error: 'HTTPS only' });
-    }
-    try {
-      if (rawUrl.includes('.m3u8')) {
-        await streamHlsToResponse(rawUrl, res, filename);
-      } else {
-        await proxyFileDownload(rawUrl, res, filename);
-      }
-    } catch (err) {
-      if (!res.headersSent) res.status(502).json({ ok: false, error: err.message });
-    }
-  });
 
   const IMG_HOST_BLOCK = /^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.)/;
 
@@ -271,25 +220,17 @@ function createApp() {
     }
   });
 
-  app.get(/^\/proxy\/jikan(\/.*)?$/, async (req, res) => {
-    const upstreamPath = req.originalUrl.replace(/^\/proxy\/jikan/, '') || '/';
-    const cacheKey = `proxy:jikan:${upstreamPath}`;
-    const cached = cache.get(cacheKey);
-    if (cached) return sendProxyResult(res, { ...cached, fromCache: true });
-    try {
-      const result = await forward(UPSTREAM.jikan, upstreamPath);
-      cache.set(cacheKey, result, TTL.jikan);
-      sendProxyResult(res, { ...result, fromCache: false });
-    } catch (err) {
-      sendProxyError(res, err);
-    }
-  });
 
   app.post(/^\/proxy\/anilist\/?$/, express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
     try {
       const result = await forward(UPSTREAM.anilist, '', {
         method: 'POST',
-        headers: { 'Content-Type': req.headers['content-type'] || 'application/json' },
+        headers: {
+          'Content-Type': req.headers['content-type'] || 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Referer: 'https://anilist.co/',
+          Origin: 'https://anilist.co',
+        },
         body: req.body,
       });
       sendProxyResult(res, result);
@@ -310,7 +251,7 @@ function createApp() {
   resolver.warmMalIndex(4).catch(() => {});
   resolver.getHomeFeed().catch(() => {});
   resolver.getTrending(10).catch(() => {});
-  resolver.browseJikan('popular', 1).catch(() => {});
+  resolver.browse('popular', 1).catch(() => {});
 
   return app;
 }

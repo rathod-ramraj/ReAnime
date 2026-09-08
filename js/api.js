@@ -149,7 +149,9 @@ const API = {
 
     if ((method === 'embed' || method === 'embed-hd2') && embedId) {
       const v = method === 'embed-hd2' ? 's-1' : variant;
-      return `${this.MEGAPLAY}/${v}/${embedId}/${track}`;
+      let cleanId = String(embedId);
+      if (cleanId.startsWith('?ep=')) cleanId = cleanId.replace('?ep=', '');
+      return `${this.MEGAPLAY}/${v}/${cleanId}/${track}`;
     }
     if (method === 'mal' && malId && ep) {
       return `${this.MEGAPLAY}/mal/${malId}/${ep}/${track}`;
@@ -179,6 +181,7 @@ const API = {
       const id = String(embedId).includes('/') ? embedId : `s-2/${embedId}`;
       return `${this.ANIMO_CDN}/?server=hd-2&id=af:${id}/${track}&${animoQs}`;
     }
+    
     return null;
   },
 
@@ -293,7 +296,7 @@ const API = {
       title_synonyms: item.synonyms || raw.title_synonyms || item.title_synonyms,
     };
     return {
-      source: item.source || 'jikan',
+      source: item.source || 'anilist',
       seriesId: item.seriesId || null,
       title: typeof Titles !== 'undefined' ? Titles.buildDisplayTitle(titleFields) : (item.title_english || item.title),
       titleEnglish: titleFields.title_english || null,
@@ -301,7 +304,9 @@ const API = {
       synonyms: titleFields.title_synonyms || [],
       altTitle: titleFields.title_japanese || null,
       rating: item.rating || raw.rating || null,
-      poster: item.poster || item.images?.jpg?.large_image_url || item.images?.jpg?.image_url,
+      poster: item.poster || raw.coverImage?.extraLarge || raw.coverImage?.large || item.images?.jpg?.large_image_url || item.images?.jpg?.image_url,
+      banner: item.banner || item.bannerImage || raw.bannerImage || raw.banner || null,
+      bannerImage: item.bannerImage || item.banner || raw.bannerImage || raw.banner || null,
       year: item.year,
       score: item.score,
       status: item.status,

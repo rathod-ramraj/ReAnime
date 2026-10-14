@@ -6,12 +6,20 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "vercel-build": "echo 'Static + serverless — no build step'"
+    "dev:client": "node scripts/prebuild.js && vite",
+    "build": "node scripts/prebuild.js && vite build && node scripts/sync-html.js",
+    "vercel-build": "node scripts/prebuild.js && vite build && node scripts/sync-html.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.4"
   }
 }

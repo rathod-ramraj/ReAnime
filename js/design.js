@@ -4,7 +4,7 @@ async function initDesign() {
     const design = await res.json();
     applyDesignPalette(design);
     applyReAnimeTheme();
-    document.title = 'Home - ReAnime - Watch Anime Online, Free Anime Streaming';
+    document.title = 'ReAnime - Watch Anime Online, Free Anime Streaming';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = '#0c0c0e';
   } catch (e) {

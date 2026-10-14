@@ -43,9 +43,36 @@ const $ = (sel) => document.querySelector(sel);
 
 
 
+function renderRatingCircle(rawScore, extraClass = '') {
+  const score = Number(rawScore || 0);
+  if (!score || isNaN(score) || score <= 0) return '';
+  const circumference = 2 * Math.PI * 12;
+  const ratingColor = score >= 7 ? '#22c55e' : score >= 5 ? '#eab308' : '#ef4444';
+  const strokeDashoffset = circumference - (Math.min(score, 10) / 10) * circumference;
+
+  return `
+    <div class="tmdb-carousel-rating${extraClass ? ` ${extraClass}` : ''}">
+      <div class="tmdb-carousel-rating-circle">
+        <svg viewBox="0 0 32 32">
+          <circle class="bg" cx="16" cy="16" r="12" />
+          <circle
+            class="progress"
+            cx="16"
+            cy="16"
+            r="12"
+            stroke="${ratingColor}"
+            stroke-dasharray="${circumference.toFixed(2)}"
+            stroke-dashoffset="${strokeDashoffset.toFixed(2)}"
+          />
+        </svg>
+        <span class="tmdb-carousel-rating-text">${score.toFixed(1)}</span>
+      </div>
+    </div>`;
+}
+
 function categoryCardHtml(a, i, extraClass = '') {
   const typeAndYear = [a.type || a.raw?.type || 'TV', a.year].filter(Boolean).join(' · ');
-  const scoreBadge = a.score ? `<span class="card-rating-badge">★ ${a.score}</span>` : '';
+  const scoreBadge = renderRatingCircle(a.score);
   return `
     <article class="category-card${extraClass ? ` ${extraClass}` : ''}" data-mal="${a.malId || ''}" data-series="${a.seriesId || ''}" data-idx="${i}">
       <div class="category-poster">
@@ -189,7 +216,9 @@ const els = {
   heroNext: $('#heroNext'),
   homeTrendingSection: $('#homeTrendingSection'),
   trendingRow: $('#trendingRow'),
+  trendingPrev: $('#trendingPrev'),
   trendingNext: $('#trendingNext'),
+  trendingBgImg: $('#trendingBgImg'),
   categorySection: $('#categorySection'),
   categoryTitle: $('#categoryTitle'),
   categoryGrid: $('#categoryGrid'),
@@ -434,9 +463,35 @@ function bindEvents() {
 
   els.heroSection?.addEventListener('pointerup', endHeroDrag);
   els.heroSection?.addEventListener('pointercancel', endHeroDrag);
-  els.trendingNext?.addEventListener('click', () => {
-    els.trendingRow?.scrollBy({ left: 320, behavior: 'smooth' });
+
+  function updateTrendingNavState() {
+    if (!els.trendingRow) return;
+    const isBeginning = els.trendingRow.scrollLeft <= 5;
+    const isEnd = els.trendingRow.scrollLeft + els.trendingRow.clientWidth >= els.trendingRow.scrollWidth - 5;
+    if (els.trendingPrev) {
+      els.trendingPrev.classList.toggle('tmdb-carousel-nav-disabled', isBeginning);
+      els.trendingPrev.disabled = isBeginning;
+    }
+    if (els.trendingNext) {
+      els.trendingNext.classList.toggle('tmdb-carousel-nav-disabled', isEnd);
+      els.trendingNext.disabled = isEnd;
+    }
+  }
+
+  els.trendingPrev?.addEventListener('click', () => {
+    els.trendingRow?.scrollBy({ left: -360, behavior: 'smooth' });
+    setTimeout(updateTrendingNavState, 350);
   });
+  els.trendingNext?.addEventListener('click', () => {
+    els.trendingRow?.scrollBy({ left: 360, behavior: 'smooth' });
+    setTimeout(updateTrendingNavState, 350);
+  });
+  els.trendingRow?.addEventListener('scroll', debounce(updateTrendingNavState, 50), { passive: true });
+  els.trendingRow?.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && els.trendingRow.scrollWidth > els.trendingRow.clientWidth) {
+      els.trendingRow.scrollLeft += e.deltaY;
+    }
+  }, { passive: true });
 
   els.bookmarkBtn?.addEventListener('click', toggleBookmarkCurrent);
   $('#footerBrand')?.addEventListener('click', (e) => { e.preventDefault(); goHome(e); });
@@ -847,7 +902,12 @@ async function loadTrendingSection() {
   if (!els.trendingRow) return;
 
   if (!state.trendingItems.length) {
-    els.trendingRow.innerHTML = Array(6).fill('<div class="skeleton-trending"></div>').join('');
+    els.trendingRow.innerHTML = Array(5).fill(`
+      <div class="tmdb-carousel-skeleton-item">
+        <div class="tmdb-carousel-skeleton-number"></div>
+        <div class="tmdb-carousel-skeleton-poster"></div>
+      </div>
+    `).join('');
   }
 
   try {
@@ -1034,28 +1094,68 @@ function renderTrending() {
     return;
   }
 
-  els.trendingRow.innerHTML = items.map((a, i) => `
-    <article class="movie-card" data-mal="${a.malId}" data-idx="${i}">
-      <div class="card-inner">
-        <span class="rank-number">${i + 1}</span>
-        <div class="poster-wrap">
-          ${imgTag(a.poster, a.title)}
-        </div>
-      </div>
-      <h3 class="movie-title">${esc(a.title)}</h3>
-    </article>`).join('');
+  const bgEl = document.getElementById('trendingBgImg');
+  if (bgEl && items.length > 0) {
+    const initialBg = items[0].banner || items[0].bannerImage || items[0].poster || '';
+    if (initialBg) bgEl.style.backgroundImage = `url(${initialBg})`;
+  }
 
-  els.trendingRow.querySelectorAll('.movie-card').forEach((card) => {
+  els.trendingRow.innerHTML = items.map((a, i) => {
+    const rank = i + 1;
+    const numberHtml = rank < 10
+      ? `<span class="tmdb-carousel-number-hollow text-transparent transition-all duration-300">${rank}</span>`
+      : `<span class="tmdb-carousel-number-hollow text-transparent transition-all duration-300">1</span><span class="tmdb-carousel-double-digit tmdb-carousel-number-hollow text-transparent transition-all duration-300">0</span>`;
+
+    const ratingHtml = renderRatingCircle(a.score);
+
+    return `
+      <div class="block relative tmdb-carousel-slide" data-mal="${a.malId}" data-idx="${i}">
+        <h3 class="sr-only">${esc(a.title)}</h3>
+        <div class="tmdb-carousel-card group">
+          <p class="tmdb-carousel-number tmdb-carousel-top10">
+            ${numberHtml}
+          </p>
+          <div class="relative">
+            <img
+              class="tmdb-carousel-poster"
+              src="${esc(posterSrc(a.poster))}"
+              data-fallback="${esc(a.poster || '')}"
+              alt="${esc(a.title || 'Poster')}"
+              loading="lazy"
+              onerror="window.__imgFallback(this)"
+            />
+            ${ratingHtml}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  els.trendingRow.querySelectorAll('.tmdb-carousel-slide').forEach((card) => {
     const idx = parseInt(card.dataset.idx, 10);
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.card-dl-btn')) return;
-      openSearchResult(state.trendingItems[idx]);
+    const item = state.trendingItems[idx];
+    card.addEventListener('click', () => {
+      openSearchResult(item);
     });
-    card.querySelector('.card-dl-btn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
+    card.addEventListener('mouseenter', () => {
+      const bgEl = document.getElementById('trendingBgImg');
+      if (bgEl && item) {
+        const bg = item.banner || item.bannerImage || item.poster || '';
+        if (bg) bgEl.style.backgroundImage = `url(${bg})`;
+      }
+      if (item?.malId) API.prefetchResolve(parseInt(item.malId, 10));
     });
-    card.addEventListener('mouseenter', () => API.prefetchResolve(parseInt(card.dataset.mal, 10)));
   });
+
+  const isBeginning = els.trendingRow.scrollLeft <= 5;
+  const isEnd = els.trendingRow.scrollLeft + els.trendingRow.clientWidth >= els.trendingRow.scrollWidth - 5;
+  if (els.trendingPrev) {
+    els.trendingPrev.classList.toggle('tmdb-carousel-nav-disabled', isBeginning);
+    els.trendingPrev.disabled = isBeginning;
+  }
+  if (els.trendingNext) {
+    els.trendingNext.classList.toggle('tmdb-carousel-nav-disabled', isEnd);
+    els.trendingNext.disabled = isEnd;
+  }
 }
 
 function renderCategoryGrid() {

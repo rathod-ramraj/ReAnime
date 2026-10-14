@@ -30,7 +30,7 @@
   if (year) year.textContent = String(new Date().getFullYear());
 
   window.PageTitle = {
-    default: 'Home - ReAnime - Watch Anime Online, Free Anime Streaming',
+    default: 'ReAnime - Watch Anime Online, Free Anime Streaming',
     set(animeTitle, episode) {
       if (animeTitle && episode) {
         document.title = `${animeTitle} · Ep ${episode} — ReAnime`;

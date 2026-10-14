@@ -1,11 +1,12 @@
 /* ReAnime service worker — required for browser install (address bar icon) */
-const CACHE = 'ReAnime-shell-v4';
+const CACHE = 'ReAnime-shell-v5';
 const SHELL = [
   '/manifest.json',
   '/favicon.png?v=2',
 ];
 
 const NETWORK_FIRST = [
+  '/dist/',
   '/css/',
   '/js/',
   '/index.html',

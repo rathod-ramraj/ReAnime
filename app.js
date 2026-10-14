@@ -66,7 +66,32 @@ function createApp() {
       res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
       res.json(result);
     } catch (err) {
-      res.status(502).json({ ok: false, error: err.message });
+      try {
+        const page = parseInt(req.query.page || '1', 10);
+        const jikanUrl = `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(q)}&page=${page}&limit=20`;
+        const jRes = await fetch(jikanUrl, { headers: { 'User-Agent': 'ReAnime/1.0' } });
+        if (jRes.ok) {
+          const jData = await jRes.json();
+          const items = (jData.data || []).map((d) => ({
+            malId: d.mal_id,
+            title: d.title,
+            titleEnglish: d.title_english,
+            titleRomaji: d.title_japanese,
+            poster: d.images?.webp?.large_image_url || d.images?.jpg?.large_image_url,
+            banner: d.images?.webp?.large_image_url || d.images?.jpg?.large_image_url,
+            score: d.score,
+            episodes: d.episodes,
+            type: d.type,
+            year: d.year,
+            genres: (d.genres || []).map((g) => g.name),
+            description: d.synopsis,
+            hasSub: true,
+            hasDub: true,
+          }));
+          return res.json({ items, pagination: { current_page: page, has_next_page: jData.pagination?.has_next_page || false } });
+        }
+      } catch (_) {}
+      res.json({ items: [], pagination: {} });
     }
   });
 
@@ -77,6 +102,38 @@ function createApp() {
       res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
       res.json(result);
     } catch (err) {
+      try {
+        const jRes = await fetch(`https://api.jikan.moe/v4/anime/${req.params.malId}`);
+        if (jRes.ok) {
+          const jData = await jRes.json();
+          const d = jData.data;
+          const anime = {
+            malId: d.mal_id,
+            title: d.title,
+            titleEnglish: d.title_english,
+            titleRomaji: d.title_japanese,
+            poster: d.images?.webp?.large_image_url || d.images?.jpg?.large_image_url,
+            banner: d.images?.webp?.large_image_url || d.images?.jpg?.large_image_url,
+            score: d.score,
+            episodes: d.episodes,
+            type: d.type,
+            year: d.year,
+            genres: (d.genres || []).map((g) => g.name),
+            description: d.synopsis,
+            hasSub: true,
+            hasDub: true,
+          };
+          const count = anime.episodes || 12;
+          const episodes = Array.from({ length: count }, (_, i) => ({
+            number: i + 1,
+            title: `Episode ${i + 1}`,
+            embedId: null,
+            embedUrl: null,
+            id: null,
+          }));
+          return res.json({ anime, episodes, streamMethod: 'mal', cachedAt: Date.now() });
+        }
+      } catch (_) {}
       res.status(502).json({ ok: false, error: err.message });
     }
   });

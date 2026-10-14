@@ -542,8 +542,8 @@ function createResolver({ cache, upstream }) {
       }
 
       if (!episodes.length) {
-        if (aniMedia?.episodes) enriched.episodes = aniMedia.episodes;
-        const epCount = enriched.episodes || details.episodes || 12;
+        if (media?.episodes) enriched.episodes = media.episodes;
+        const epCount = enriched.episodes || 12;
         episodes = buildEpisodesFromCount(epCount);
         streamMethod = aniId ? 'ani' : 'mal';
       }

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0c0c0e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ReAnime" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>ReAnime - Watch Anime Online, Free Anime Streaming</title>
+    <meta name="description"
+        content="ReAnime lets you search, browse, and watch anime online in HD. Explore trending series, movies, top airing shows, and popular titles — sub and dub." />
+    <meta name="keywords"
+        content="watch anime online, anime streaming, anime HD, sub anime, dub anime, trending anime, anime movies, TV series anime, ReAnime" />
+    <meta name="author" content="ReAnime" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://reanime.site/" id="canonicalUrl" />
+    <link rel="icon" type="image/png" href="/favicon.png?v=2" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/favicon.png?v=2" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ReAnime" />
+    <meta property="og:title" content="ReAnime - Watch Anime Online, Free Anime Streaming" />
+    <meta property="og:description"
+        content="Search and stream anime in HD. Browse trending, movies, TV series, most popular, and top airing anime on ReAnime." />
+    <meta property="og:image" content="/favicon.png?v=2" id="ogImage" />
+    <meta property="og:url" content="/" id="ogUrl" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ReAnime - Watch Anime Online, Free Anime Streaming" />
+    <meta name="twitter:description"
+        content="Search and stream anime in HD. Trending, movies, TV series, and top airing shows." />
+    <meta name="twitter:image" content="/favicon.png?v=2" id="twitterImage" />
+    <script type="application/ld+json" id="schemaWebSite">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "ReAnime",
+      "alternateName": "ReAnime",
+      "description": "Watch anime online in HD. Browse trending anime, movies, TV series, and top airing shows.",
+      "url": "/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@300;400&family=Outfit:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&f[]=satoshi@300,400,500,700,900&display=swap"
+        rel="stylesheet" />
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="module" src="/src/main.jsx"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js?v=5', { scope: '/' }).catch(function () { });
+            });
+        }
+    </script>
+</body>
+
+</html>
